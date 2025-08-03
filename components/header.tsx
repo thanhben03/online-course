@@ -111,6 +111,9 @@ export default function Header({
             <Link href="/courses" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
               Khóa học
             </Link>
+            <Link href="/upload-test" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
+              Upload Test
+            </Link>
             <Link href="/profile" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
               Tài khoản
             </Link>
@@ -146,6 +149,9 @@ export default function Header({
           </Link>
           <Link href="/courses" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
             Khóa học
+          </Link>
+          <Link href="/upload-test" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
+            Upload Test
           </Link>
           <Link href="/profile" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
             Tài khoản
