@@ -11,46 +11,26 @@ import { Progress } from "@/components/ui/progress"
 import { BookOpen, Play, CheckCircle, User, LogOut } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Header from "@/components/header"
+import { apiClient } from "@/lib/api"
 
-const userCourses = [
-  {
-    id: 1,
-    title: "Lập trình Web Frontend",
-    description: "Học HTML, CSS, JavaScript và React từ cơ bản đến nâng cao",
-    image: "/placeholder.svg?height=200&width=300",
-    totalLessons: 48,
-    completedLessons: 12,
-    progress: 25,
-    status: "learning",
-    lastAccessed: "2 giờ trước",
-  },
-  {
-    id: 2,
-    title: "Thiết kế UI/UX",
-    description: "Thiết kế giao diện người dùng chuyên nghiệp với Figma",
-    image: "/placeholder.svg?height=200&width=300",
-    totalLessons: 32,
-    completedLessons: 32,
-    progress: 100,
-    status: "completed",
-    lastAccessed: "1 tuần trước",
-  },
-  {
-    id: 3,
-    title: "Marketing Digital",
-    description: "Chiến lược marketing online hiệu quả cho doanh nghiệp",
-    image: "/placeholder.svg?height=200&width=300",
-    totalLessons: 40,
-    completedLessons: 8,
-    progress: 20,
-    status: "learning",
-    lastAccessed: "1 ngày trước",
-  },
-]
+interface Course {
+  id: number;
+  title: string;
+  description?: string;
+  thumbnail_url?: string;
+  price: number;
+  instructor_id: number;
+  instructor_name?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function CoursesPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userInfo, setUserInfo] = useState<any>(null)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
   const router = useRouter()
 
@@ -67,6 +47,25 @@ export default function CoursesPage() {
     if (user) {
       setUserInfo(JSON.parse(user))
     }
+
+    // Fetch courses from API
+    const fetchCourses = async () => {
+      try {
+        const result = await apiClient.getCourses()
+        
+        if (result.success && result.data) {
+          setCourses(result.data.courses)
+        } else {
+          console.error('Failed to fetch courses:', result.error)
+        }
+      } catch (error) {
+        console.error('Error fetching courses:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
   }, [router])
 
   const handleLogout = () => {
@@ -75,10 +74,10 @@ export default function CoursesPage() {
     router.push("/")
   }
 
-  const filteredCourses = userCourses.filter((course) => {
+  const filteredCourses = courses.filter((course: Course) => {
     if (filter === "all") return true
-    if (filter === "learning") return course.status === "learning"
-    if (filter === "completed") return course.status === "completed"
+    if (filter === "learning") return course.status === "draft"
+    if (filter === "completed") return course.status === "published"
     return true
   })
 
@@ -91,7 +90,7 @@ export default function CoursesPage() {
       {/* Header */}
       <Header variant="course" userInfo={userInfo} onLogout={handleLogout} showBackButton={false} />
 
-      <div className="container mx-auto py-8 px-4">
+      <div className="container max-w-7xl mx-auto py-8 px-4">
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Khóa học của bạn</h1>
@@ -119,22 +118,22 @@ export default function CoursesPage() {
               <CardHeader className="p-0">
                 <div className="relative overflow-hidden rounded-t-lg">
                   <Image
-                    src={course.image || "/placeholder.svg"}
+                    src={course.thumbnail_url || "/placeholder.svg"}
                     alt={course.title}
                     width={300}
                     height={200}
                     className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-3 right-3">
-                    {course.status === "completed" ? (
+                    {course.status === "published" ? (
                       <Badge className="bg-green-500 hover:bg-green-600">
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        Hoàn thành
+                        Đã xuất bản
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="bg-blue-500 text-white hover:bg-blue-600">
                         <Play className="h-3 w-3 mr-1" />
-                        Đang học
+                        Bản nháp
                       </Badge>
                     )}
                   </div>
@@ -145,28 +144,32 @@ export default function CoursesPage() {
                   {course.title}
                 </CardTitle>
                 <CardDescription className="text-sm text-gray-600 line-clamp-2 mb-4">
-                  {course.description}
+                  {course.description || "Không có mô tả"}
                 </CardDescription>
 
-                {/* Progress */}
+                {/* Course Info */}
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tiến độ học tập</span>
+                    <span className="text-gray-600">Giảng viên</span>
                     <span className="font-medium">
-                      {course.completedLessons}/{course.totalLessons} bài
+                      {course.instructor_name || "Chưa có"}
                     </span>
                   </div>
-                  <Progress value={course.progress} className="h-2" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Giá</span>
+                    <span className="font-medium">
+                      {course.price > 0 ? `${course.price.toLocaleString('vi-VN')} VNĐ` : "Miễn phí"}
+                    </span>
+                  </div>
                   <div className="flex justify-between text-xs text-gray-500">
-                    <span>{course.progress}% hoàn thành</span>
-                    <span>Truy cập: {course.lastAccessed}</span>
+                    <span>Ngày tạo: {new Date(course.created_at).toLocaleDateString('vi-VN')}</span>
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="p-4 pt-0">
-                <Link href={`/learn/${course.id}`} className="w-full">
+                <Link href={`/course/${course.id}`} className="w-full">
                   <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                    {course.status === "completed" ? "Ôn tập" : "Tiếp tục học"}
+                    Xem chi tiết
                   </Button>
                 </Link>
               </CardFooter>
@@ -174,22 +177,27 @@ export default function CoursesPage() {
           ))}
         </div>
 
-        {filteredCourses.length === 0 && (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Đang tải khóa học...</p>
+          </div>
+        ) : filteredCourses.length === 0 ? (
           <div className="text-center py-12">
             <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Không có khóa học nào</h3>
             <p className="text-gray-600 mb-4">
-              {filter === "completed"
-                ? "Bạn chưa hoàn thành khóa học nào."
-                : filter === "learning"
-                  ? "Bạn chưa có khóa học đang học nào."
-                  : "Bạn chưa được gán khóa học nào."}
+              {filter === "published"
+                ? "Chưa có khóa học nào được xuất bản."
+                : filter === "draft"
+                  ? "Chưa có khóa học nào ở trạng thái nháp."
+                  : "Chưa có khóa học nào trong hệ thống."}
             </p>
             <Link href="/">
               <Button variant="outline">Khám phá khóa học</Button>
             </Link>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

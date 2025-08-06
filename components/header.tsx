@@ -141,7 +141,9 @@ export default function Header({
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-2">
           <BookOpen className="h-8 w-8 text-blue-600" />
-          <span className="text-xl font-bold text-gray-900">EduPlatform</span>
+          <span className="text-xl font-bold text-gray-900">
+            
+          </span>
         </div>
         <nav className="hidden md:flex items-center space-x-6">
           <Link href="/" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">
