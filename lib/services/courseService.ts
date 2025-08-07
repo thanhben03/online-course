@@ -10,6 +10,8 @@ export interface Course {
   status: string;
   created_at: Date;
   updated_at: Date;
+  total_lessons: number;
+  total_duration: number;
 }
 
 export interface CreateCourseData {
@@ -36,11 +38,13 @@ export const courseService = {
   // Lấy tất cả khóa học
   async getAllCourses(): Promise<Course[]> {
     const result = await sql`
-      SELECT c.*, u.name as instructor_name
+      SELECT c.*, u.name as instructor_name, COUNT(l.id) as total_lessons, SUM(l.duration) as total_duration
       FROM courses c
       LEFT JOIN users u ON c.instructor_id = u.id
+      LEFT JOIN lessons l on l.course_id = c.id
       WHERE c.status = 'published'
-      ORDER BY c.created_at DESC
+      GROUP BY c.id, u.name
+      ORDER BY c.created_at DESC 
     `;
     
     return result as Course[];

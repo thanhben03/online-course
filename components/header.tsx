@@ -41,7 +41,8 @@ export default function Header({
     } else {
       localStorage.removeItem("isLoggedIn")
       localStorage.removeItem("userInfo")
-      router.push("/")
+      setIsLoggedIn(false)
+      router.push("/courses")
     }
   }
 
@@ -142,7 +143,7 @@ export default function Header({
         <div className="flex items-center space-x-2">
           <BookOpen className="h-8 w-8 text-blue-600" />
           <span className="text-xl font-bold text-gray-900">
-            
+            EduPlatform
           </span>
         </div>
         <nav className="hidden md:flex items-center space-x-6">

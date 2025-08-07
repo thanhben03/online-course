@@ -22,65 +22,10 @@ import {
   ArrowRight
 } from "lucide-react"
 import Header from "@/components/header"
+import { courseService } from "@/lib/services/courseService"
+import { randomInt } from "node:crypto"
 
-const courses = [
-  {
-    id: 1,
-    title: "Lập trình Web Frontend",
-    description: "Học HTML, CSS, JavaScript và React từ cơ bản đến nâng cao",
-    image: "/placeholder.svg?height=200&width=300",
-    chapters: 12,
-    lessons: 48,
-    duration: "40 giờ",
-    students: 1250,
-    rating: 4.8,
-    instructor: "Nguyễn Văn A",
-    price: "Miễn phí",
-    featured: true,
-  },
-  {
-    id: 2,
-    title: "Thiết kế UI/UX",
-    description: "Thiết kế giao diện người dùng chuyên nghiệp với Figma",
-    image: "/placeholder.svg?height=200&width=300",
-    chapters: 8,
-    lessons: 32,
-    duration: "25 giờ",
-    students: 890,
-    rating: 4.9,
-    instructor: "Trần Thị B",
-    price: "Miễn phí",
-    featured: true,
-  },
-  {
-    id: 3,
-    title: "Marketing Digital",
-    description: "Chiến lược marketing online hiệu quả cho doanh nghiệp",
-    image: "/placeholder.svg?height=200&width=300",
-    chapters: 10,
-    lessons: 40,
-    duration: "30 giờ",
-    students: 2100,
-    rating: 4.7,
-    instructor: "Lê Văn C",
-    price: "Miễn phí",
-    featured: false,
-  },
-  {
-    id: 4,
-    title: "Phân tích dữ liệu",
-    description: "Học Python, SQL và các công cụ phân tích dữ liệu",
-    image: "/placeholder.svg?height=200&width=300",
-    chapters: 15,
-    lessons: 60,
-    duration: "50 giờ",
-    students: 750,
-    rating: 4.6,
-    instructor: "Phạm Thị D",
-    price: "Miễn phí",
-    featured: false,
-  },
-]
+
 
 const instructors = [
   {
@@ -175,7 +120,24 @@ const stats = [
   { number: "24/7", label: "Hỗ trợ", icon: <MessageCircle className="h-6 w-6" /> },
 ]
 
-export default function HomePage() {
+export default async function HomePage() {
+  const courses = await courseService.getAllCourses()
+  const formatPrice = (price: number | string | null | undefined) => {
+    console.log('formatPrice called with:', price, typeof price)
+    
+    // Chuyển đổi string thành number nếu cần
+    let numericPrice: number
+    if (typeof price === 'string') {
+      numericPrice = parseFloat(price)
+    } else {
+      numericPrice = price || 0
+    }
+    
+    if (!numericPrice || numericPrice === 0) {
+      return "Miễn phí"
+    }
+    return numericPrice.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Header */}
@@ -274,7 +236,7 @@ export default function HomePage() {
                 <CardHeader className="p-0">
                   <div className="relative overflow-hidden rounded-t-lg">
                     <Image
-                      src={course.image || "/placeholder.svg"}
+                      src={course.thumbnail_url || "/placeholder.svg"}
                       alt={course.title}
                       width={300}
                       height={200}
@@ -282,17 +244,17 @@ export default function HomePage() {
                     />
                     <div className="absolute top-3 right-3">
                       <Badge variant="secondary" className="bg-white/90 text-gray-700">
-                        {course.chapters} chương
+                        {course.total_lessons} bài
                       </Badge>
                     </div>
-                    {course.featured && (
-                      <div className="absolute top-3 left-3">
-                        <Badge className="bg-yellow-500 text-white">
-                          <Star className="h-3 w-3 mr-1" />
-                          Nổi bật
-                        </Badge>
-                      </div>
-                    )}
+                    
+                    <div className="absolute top-3 left-3">
+                      <Badge className="bg-yellow-500 text-white">
+                        <Star className="h-3 w-3 mr-1" />
+                        Nổi bật
+                      </Badge>
+                    </div>
+                    
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
@@ -308,28 +270,28 @@ export default function HomePage() {
                   <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
                     <div className="flex items-center gap-1">
                       <BookOpen className="h-4 w-4" />
-                      <span>{course.lessons} bài</span>
+                      <span>{course.total_lessons} bài</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      <span>{course.duration}</span>
+                      <span>{course.total_duration} phút</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      <span>{course.students}</span>
+                      <span>{randomInt(1000, 10000)}</span>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <span className="text-sm font-medium">{course.rating}</span>
+                      <span className="text-sm font-medium">{randomInt(4, 5)}</span>
                     </div>
-                    <span className="text-sm text-green-600 font-medium">{course.price}</span>
+                    <span className="text-sm text-green-600 font-medium">{formatPrice(course.price)}</span>
                   </div>
                   
                   <div className="text-xs text-gray-500 mb-3">
-                    Giảng viên: {course.instructor}
+                    Giảng viên: Nguyễn Văn A
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">

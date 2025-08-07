@@ -70,7 +70,7 @@ class ApiClient {
   }
 
   async getCourse(id: number) {
-    return this.request(`/api/courses/${id}`);
+    return this.request<{ course: any }>(`/api/courses/${id}`);
   }
 
   async createCourse(courseData: {
@@ -110,6 +110,31 @@ class ApiClient {
   async initializeDatabase() {
     return this.request('/api/init-db', {
       method: 'POST',
+    });
+  }
+
+  // Seed data
+  async seedData() {
+    return this.request<{ coursesCreated: number; lessonsCreated: number; courseIds: number[] }>('/api/seed-data', {
+      method: 'POST',
+    });
+  }
+
+  // Lesson APIs
+  async getLessonsByCourse(courseId: number) {
+    return this.request<{ lessons: any[] }>(`/api/courses/${courseId}/lessons`);
+  }
+
+  async createLesson(courseId: number, lessonData: {
+    title: string;
+    description?: string;
+    video_url?: string;
+    duration?: number;
+    order_index?: number;
+  }) {
+    return this.request<{ lesson: any }>(`/api/courses/${courseId}/lessons`, {
+      method: 'POST',
+      body: JSON.stringify(lessonData),
     });
   }
 }

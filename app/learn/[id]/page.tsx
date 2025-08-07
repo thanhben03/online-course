@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import Header from "@/components/header"
+import { apiClient } from "@/lib/api"
 import {
   BookOpen,
   ChevronDown,
@@ -28,78 +29,32 @@ import {
   Menu,
   X,
   List,
+  Loader2,
 } from "lucide-react"
 
-const courseData = {
-  1: {
-    title: "Lập trình Web Frontend",
-    description: "Học HTML, CSS, JavaScript và React từ cơ bản đến nâng cao",
-    chapters: [
-      {
-        id: 1,
-        title: "Giới thiệu về Web Development",
-        lessons: [
-          {
-            id: 1,
-            title: "Tổng quan về Web Development",
-            duration: "15:30",
-            completed: true,
-            documents: ["Slide bài gi강.pdf", "Tài liệu tham khảo.docx"],
-          },
-          {
-            id: 2,
-            title: "Cài đặt môi trường phát triển",
-            duration: "12:45",
-            completed: true,
-            documents: ["Hướng dẫn cài đặt.pdf"],
-          },
-          { id: 3, title: "Cấu trúc thư mục dự án", duration: "10:20", completed: false, documents: [] },
-        ],
-      },
-      {
-        id: 2,
-        title: "HTML Cơ bản",
-        lessons: [
-          {
-            id: 4,
-            title: "Cú pháp HTML cơ bản",
-            duration: "18:15",
-            completed: false,
-            documents: ["HTML Cheatsheet.pdf"],
-          },
-          {
-            id: 5,
-            title: "Các thẻ HTML thông dụng",
-            duration: "22:30",
-            completed: false,
-            documents: ["Danh sách thẻ HTML.pdf", "Bài tập thực hành.docx"],
-          },
-          { id: 6, title: "Form và Input trong HTML", duration: "16:45", completed: false, documents: [] },
-        ],
-      },
-      {
-        id: 3,
-        title: "CSS Styling",
-        lessons: [
-          {
-            id: 7,
-            title: "CSS Selectors và Properties",
-            duration: "20:10",
-            completed: false,
-            documents: ["CSS Reference.pdf"],
-          },
-          {
-            id: 8,
-            title: "Flexbox Layout",
-            duration: "25:30",
-            completed: false,
-            documents: ["Flexbox Guide.pdf", "Flexbox Examples.html"],
-          },
-          { id: 9, title: "CSS Grid System", duration: "28:45", completed: false, documents: [] },
-        ],
-      },
-    ],
-  },
+interface Lesson {
+  id: number
+  course_id: number
+  title: string
+  description?: string
+  video_url?: string
+  duration: number
+  order_index: number
+  created_at: string
+  updated_at: string
+}
+
+interface Course {
+  id: number
+  title: string
+  description?: string
+  thumbnail_url?: string
+  price: number
+  instructor_id: number
+  instructor_name?: string
+  status: string
+  created_at: string
+  updated_at: string
 }
 
 export default function LearnPage() {
@@ -108,16 +63,15 @@ export default function LearnPage() {
   const courseId = Number.parseInt(params.id as string)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userInfo, setUserInfo] = useState<any>(null)
-  const [expandedChapters, setExpandedChapters] = useState<number[]>([1])
-  const [currentLesson, setCurrentLesson] = useState(1)
+  const [course, setCourse] = useState<Course | null>(null)
+  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [loading, setLoading] = useState(true)
+  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(930) // 15:30 in seconds
+  const [duration, setDuration] = useState(0)
   const [showSidebar, setShowSidebar] = useState(false)
-  const [showDocuments, setShowDocuments] = useState(false)
   const [activeTab, setActiveTab] = useState<'content' | 'documents'>('content')
-
-  const course = courseData[courseId as keyof typeof courseData]
 
   useEffect(() => {
     const loggedIn = localStorage.getItem("isLoggedIn")
@@ -132,7 +86,39 @@ export default function LearnPage() {
     if (user) {
       setUserInfo(JSON.parse(user))
     }
-  }, [router])
+
+    // Fetch course and lessons data
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch course details
+        const courseResult = await apiClient.getCourse(courseId)
+        if (courseResult.success && courseResult.data) {
+          setCourse(courseResult.data.course)
+        }
+
+        // Fetch lessons
+        const lessonsResult = await apiClient.getLessonsByCourse(courseId)
+        if (lessonsResult.success && lessonsResult.data) {
+          const sortedLessons = lessonsResult.data.lessons.sort((a: Lesson, b: Lesson) => a.order_index - b.order_index)
+          setLessons(sortedLessons)
+          
+          // Set first lesson as current
+          if (sortedLessons.length > 0) {
+            setCurrentLesson(sortedLessons[0])
+            setDuration(sortedLessons[0].duration)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [router, courseId])
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -148,18 +134,35 @@ export default function LearnPage() {
     router.push("/")
   }
 
-  const toggleChapter = (chapterId: number) => {
-    setExpandedChapters((prev) =>
-      prev.includes(chapterId) ? prev.filter((id) => id !== chapterId) : [...prev, chapterId],
-    )
-  }
-
-  const getCurrentLesson = () => {
-    for (const chapter of course?.chapters || []) {
-      const lesson = chapter.lessons.find((l) => l.id === currentLesson)
-      if (lesson) return lesson
+  // Group lessons by order_index ranges (simulating chapters)
+  const getChapters = () => {
+    if (lessons.length === 0) return []
+    
+    const chapters = []
+    let currentChapter = {
+      id: 1,
+      title: "Chương 1",
+      lessons: [] as Lesson[]
     }
-    return null
+    
+    lessons.forEach((lesson, index) => {
+      // Create new chapter every 3-4 lessons
+      if (index > 0 && index % 3 === 0) {
+        chapters.push(currentChapter)
+        currentChapter = {
+          id: chapters.length + 1,
+          title: `Chương ${chapters.length + 1}`,
+          lessons: []
+        }
+      }
+      currentChapter.lessons.push(lesson)
+    })
+    
+    if (currentChapter.lessons.length > 0) {
+      chapters.push(currentChapter)
+    }
+    
+    return chapters
   }
 
   const formatTime = (seconds: number) => {
@@ -168,11 +171,44 @@ export default function LearnPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  if (!isLoggedIn || !course) {
+  const handleLessonSelect = (lesson: Lesson) => {
+    setCurrentLesson(lesson)
+    setDuration(lesson.duration)
+    setCurrentTime(0)
+    setIsPlaying(false)
+  }
+
+  if (!isLoggedIn) {
     return <div>Đang tải...</div>
   }
 
-  const currentLessonData = getCurrentLesson()
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Đang tải khóa học...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p>Không tìm thấy khóa học</p>
+          <Button onClick={() => router.push('/courses')} className="mt-4">
+            Quay về danh sách khóa học
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const chapters = getChapters()
+  const completedLessons = 0 // TODO: Implement progress tracking
+  const totalLessons = lessons.length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -194,54 +230,38 @@ export default function LearnPage() {
         }`}>
           <div className="p-4 border-b">
             <h2 className="font-semibold text-gray-900 mb-2">Nội dung khóa học</h2>
-            <Progress value={25} className="h-2" />
-            <p className="text-sm text-gray-600 mt-2">2/9 bài đã hoàn thành</p>
+            <Progress value={totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0} className="h-2" />
+            <p className="text-sm text-gray-600 mt-2">{completedLessons}/{totalLessons} bài đã hoàn thành</p>
           </div>
 
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="p-4 space-y-2">
-              {course.chapters.map((chapter) => (
+              {chapters.map((chapter) => (
                 <div key={chapter.id} className="border rounded-lg">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-between p-3 h-auto"
-                    onClick={() => toggleChapter(chapter.id)}
-                  >
-                    <span className="font-medium text-left">{chapter.title}</span>
-                    {expandedChapters.includes(chapter.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-
-                  {expandedChapters.includes(chapter.id) && (
-                    <div className="border-t">
-                      {chapter.lessons.map((lesson) => (
-                        <Button
-                          key={lesson.id}
-                          variant={currentLesson === lesson.id ? "secondary" : "ghost"}
-                          className="w-full justify-start p-3 h-auto border-b last:border-b-0"
-                          onClick={() => {
-                            setCurrentLesson(lesson.id)
-                            setShowSidebar(false) // Close sidebar on mobile after selecting lesson
-                          }}
-                        >
-                          <div className="flex items-center space-x-3 w-full">
-                            {lesson.completed ? (
-                              <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                            ) : (
-                              <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                            )}
-                            <div className="flex-1 text-left">
-                              <div className="font-medium text-sm">{lesson.title}</div>
-                              <div className="text-xs text-gray-500">{lesson.duration}</div>
-                            </div>
+                  <div className="p-3 border-b bg-gray-50">
+                    <span className="font-medium text-sm">{chapter.title}</span>
+                  </div>
+                  <div>
+                    {chapter.lessons.map((lesson) => (
+                      <Button
+                        key={lesson.id}
+                        variant={currentLesson?.id === lesson.id ? "secondary" : "ghost"}
+                        className="w-full justify-start p-3 h-auto border-b last:border-b-0"
+                        onClick={() => {
+                          handleLessonSelect(lesson)
+                          setShowSidebar(false) // Close sidebar on mobile after selecting lesson
+                        }}
+                      >
+                        <div className="flex items-center space-x-3 w-full">
+                          <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          <div className="flex-1 text-left">
+                            <div className="font-medium text-sm">{lesson.title}</div>
+                            <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
                           </div>
-                        </Button>
-                      ))}
-                    </div>
-                  )}
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -263,8 +283,8 @@ export default function LearnPage() {
             <div className="w-full h-full flex items-center justify-center">
               <div className="text-white text-center px-4">
                 <Play className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-base sm:text-lg opacity-75">{currentLessonData?.title}</p>
-                <p className="text-xs sm:text-sm opacity-50">Thời lượng: {currentLessonData?.duration}</p>
+                <p className="text-base sm:text-lg opacity-75">{currentLesson?.title}</p>
+                <p className="text-xs sm:text-sm opacity-50">Thời lượng: {currentLesson ? formatTime(currentLesson.duration) : '0:00'}</p>
               </div>
             </div>
 
@@ -329,45 +349,29 @@ export default function LearnPage() {
             {activeTab === 'content' ? (
               <ScrollArea className="h-full">
                 <div className="p-4 space-y-2">
-                  {course.chapters.map((chapter) => (
+                  {chapters.map((chapter) => (
                     <div key={chapter.id} className="border rounded-lg">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-between p-3 h-auto"
-                        onClick={() => toggleChapter(chapter.id)}
-                      >
-                        <span className="font-medium text-left text-sm">{chapter.title}</span>
-                        {expandedChapters.includes(chapter.id) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </Button>
-
-                      {expandedChapters.includes(chapter.id) && (
-                        <div className="border-t">
-                          {chapter.lessons.map((lesson) => (
-                            <Button
-                              key={lesson.id}
-                              variant={currentLesson === lesson.id ? "secondary" : "ghost"}
-                              className="w-full justify-start p-3 h-auto border-b last:border-b-0"
-                              onClick={() => setCurrentLesson(lesson.id)}
-                            >
-                              <div className="flex items-center space-x-3 w-full">
-                                {lesson.completed ? (
-                                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                ) : (
-                                  <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                )}
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-sm">{lesson.title}</div>
-                                  <div className="text-xs text-gray-500">{lesson.duration}</div>
-                                </div>
+                      <div className="p-3 border-b bg-gray-50">
+                        <span className="font-medium text-sm">{chapter.title}</span>
+                      </div>
+                      <div>
+                        {chapter.lessons.map((lesson) => (
+                          <Button
+                            key={lesson.id}
+                            variant={currentLesson?.id === lesson.id ? "secondary" : "ghost"}
+                            className="w-full justify-start p-3 h-auto border-b last:border-b-0"
+                            onClick={() => handleLessonSelect(lesson)}
+                          >
+                            <div className="flex items-center space-x-3 w-full">
+                              <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <div className="flex-1 text-left">
+                                <div className="font-medium text-sm">{lesson.title}</div>
+                                <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
                               </div>
-                            </Button>
-                          ))}
-                        </div>
-                      )}
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -375,38 +379,17 @@ export default function LearnPage() {
             ) : (
               <ScrollArea className="h-full">
                 <div className="p-4">
-                  {currentLessonData?.documents && currentLessonData.documents.length > 0 ? (
-                    <div className="space-y-3">
-                      {currentLessonData.documents.map((doc, index) => (
-                        <Card key={index} className="p-3 hover:shadow-md transition-shadow cursor-pointer">
-                          <div className="flex items-center space-x-3">
-                            <FileText className="h-6 w-6 text-blue-600 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{doc}</p>
-                              <p className="text-xs text-gray-500">PDF • 2.5 MB</p>
-                            </div>
-                            <Button variant="ghost" size="sm">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500 text-sm">Bài học này không có tài liệu đi kèm</p>
-                    </div>
-                  )}
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">Tính năng tài liệu sẽ được phát triển sau</p>
+                  </div>
 
                   <Separator className="my-6" />
 
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Mô tả bài học</h4>
                     <p className="text-sm text-gray-600 leading-relaxed">
-                      Trong bài học này, bạn sẽ được tìm hiểu về các khái niệm cơ bản của web development, bao gồm cách thức
-                      hoạt động của web, các công nghệ frontend và backend, cũng như roadmap để trở thành một web developer
-                      chuyên nghiệp.
+                      {currentLesson?.description || "Chưa có mô tả cho bài học này."}
                     </p>
                   </div>
                 </div>
@@ -423,38 +406,17 @@ export default function LearnPage() {
 
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="p-4">
-              {currentLessonData?.documents && currentLessonData.documents.length > 0 ? (
-                <div className="space-y-3">
-                  {currentLessonData.documents.map((doc, index) => (
-                    <Card key={index} className="p-3 hover:shadow-md transition-shadow cursor-pointer">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-8 w-8 text-blue-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{doc}</p>
-                          <p className="text-xs text-gray-500">PDF • 2.5 MB</p>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm">Bài học này không có tài liệu đi kèm</p>
-                </div>
-              )}
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">Tính năng tài liệu sẽ được phát triển sau</p>
+              </div>
 
               <Separator className="my-6" />
 
               <div>
                 <h4 className="font-medium text-gray-900 mb-3">Mô tả bài học</h4>
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  Trong bài học này, bạn sẽ được tìm hiểu về các khái niệm cơ bản của web development, bao gồm cách thức
-                  hoạt động của web, các công nghệ frontend và backend, cũng như roadmap để trở thành một web developer
-                  chuyên nghiệp.
+                  {currentLesson?.description || "Chưa có mô tả cho bài học này."}
                 </p>
               </div>
             </div>
