@@ -121,3 +121,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Video protection styles */
+video {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Disable right-click context menu on video */
+video::-webkit-media-controls {
+  -webkit-user-select: none;
+}
+
+/* Prevent video download via developer tools */
+@media print {
+  video {
+    display: none !important;
+  }
+}

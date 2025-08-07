@@ -24,6 +24,7 @@ import {
 import Header from "@/components/header"
 import { courseService } from "@/lib/services/courseService"
 import { randomInt } from "node:crypto"
+import { formatDuration, formatPrice } from "@/lib/utils"
 
 
 
@@ -122,22 +123,7 @@ const stats = [
 
 export default async function HomePage() {
   const courses = await courseService.getAllCourses()
-  const formatPrice = (price: number | string | null | undefined) => {
-    console.log('formatPrice called with:', price, typeof price)
-    
-    // Chuyển đổi string thành number nếu cần
-    let numericPrice: number
-    if (typeof price === 'string') {
-      numericPrice = parseFloat(price)
-    } else {
-      numericPrice = price || 0
-    }
-    
-    if (!numericPrice || numericPrice === 0) {
-      return "Miễn phí"
-    }
-    return numericPrice.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })
-  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Header */}
@@ -274,7 +260,7 @@ export default async function HomePage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      <span>{course.total_duration} phút</span>
+                      <span>{formatDuration(course.total_duration)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />

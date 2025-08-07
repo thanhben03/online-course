@@ -12,6 +12,7 @@ import { BookOpen, Play, CheckCircle, User, LogOut } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Header from "@/components/header"
 import { apiClient } from "@/lib/api"
+import { formatPrice } from "@/lib/utils"
 
 interface Course {
   id: number;
@@ -158,7 +159,7 @@ export default function CoursesPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Giá</span>
                     <span className="font-medium">
-                      {course.price > 0 ? `${course.price.toLocaleString('vi-VN')} VNĐ` : "Miễn phí"}
+                      {formatPrice(course.price)}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500">

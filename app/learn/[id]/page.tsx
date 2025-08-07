@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import Header from "@/components/header"
+import VideoPlayer from "@/components/video-player"
 import { apiClient } from "@/lib/api"
 import {
   BookOpen,
@@ -280,16 +281,16 @@ export default function LearnPage() {
         <div className="flex-1 flex flex-col">
           <div className="flex-1 bg-black relative">
             {/* Video Player */}
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="text-white text-center px-4">
-                <Play className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-base sm:text-lg opacity-75">{currentLesson?.title}</p>
-                <p className="text-xs sm:text-sm opacity-50">Thời lượng: {currentLesson ? formatTime(currentLesson.duration) : '0:00'}</p>
-              </div>
-            </div>
+                         <div className="w-full h-full flex items-center justify-center">
+               <VideoPlayer
+                 src={"https://s3-hcm5-r1.longvan.net/19428351-course/uploads/1754236494324-5qm0l6om79p.mp4"}
+                 className="w-full h-full"
+                 autoPlay={false}
+               />
+             </div>
 
             {/* Video Controls */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 sm:p-4">
+            {/* <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 sm:p-4">
               <div className="space-y-2">
                 <Progress value={(currentTime / duration) * 100} className="h-1 bg-white/20" />
                 <div className="flex items-center justify-between text-white">
@@ -319,7 +320,7 @@ export default function LearnPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Mobile tabs for content and documents */}
