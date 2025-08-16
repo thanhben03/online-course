@@ -58,6 +58,26 @@ interface Course {
   updated_at: string
 }
 
+interface Document {
+  id: number
+  filename: string
+  originalName: string
+  fileSize: number
+  fileType: string
+  downloadUrl: string
+  uploadedAt: string
+  icon: string
+}
+
+interface Video {
+  source: 'direct' | 'upload'
+  url: string
+  type: 'url' | 'file'
+  filename?: string
+  fileType?: string
+  fileSize?: number
+}
+
 export default function LearnPage() {
   const params = useParams()
   const router = useRouter()
@@ -73,6 +93,52 @@ export default function LearnPage() {
   const [duration, setDuration] = useState(0)
   const [showSidebar, setShowSidebar] = useState(false)
   const [activeTab, setActiveTab] = useState<'content' | 'documents'>('content')
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [documentsLoading, setDocumentsLoading] = useState(false)
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null)
+  const [videoLoading, setVideoLoading] = useState(false)
+
+  // Fetch documents for a lesson
+  const fetchDocuments = async (lessonId: number) => {
+    setDocumentsLoading(true)
+    try {
+      const response = await fetch(`/api/lessons/${lessonId}/documents`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setDocuments(data.documents || [])
+      } else {
+        console.error('Error fetching documents:', data.error)
+        setDocuments([])
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error)
+      setDocuments([])
+    } finally {
+      setDocumentsLoading(false)
+    }
+  }
+
+  // Fetch video for a lesson
+  const fetchVideo = async (lessonId: number) => {
+    setVideoLoading(true)
+    try {
+      const response = await fetch(`/api/lessons/${lessonId}/videos`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setCurrentVideo(data.video)
+      } else {
+        console.error('Error fetching video:', data.error)
+        setCurrentVideo(null)
+      }
+    } catch (error) {
+      console.error('Error fetching video:', error)
+      setCurrentVideo(null)
+    } finally {
+      setVideoLoading(false)
+    }
+  }
 
   useEffect(() => {
     const loggedIn = localStorage.getItem("isLoggedIn")
@@ -109,6 +175,9 @@ export default function LearnPage() {
           if (sortedLessons.length > 0) {
             setCurrentLesson(sortedLessons[0])
             setDuration(sortedLessons[0].duration)
+            // Fetch documents and video for first lesson
+            fetchDocuments(sortedLessons[0].id)
+            fetchVideo(sortedLessons[0].id)
           }
         }
       } catch (error) {
@@ -172,11 +241,42 @@ export default function LearnPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes"
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
+
+  const getFileIconComponent = (iconType: string) => {
+    switch (iconType) {
+      case 'pdf':
+        return <FileText className="h-5 w-5 text-red-500" />
+      case 'doc':
+        return <FileText className="h-5 w-5 text-blue-500" />
+      case 'excel':
+        return <FileText className="h-5 w-5 text-green-500" />
+      case 'ppt':
+        return <FileText className="h-5 w-5 text-orange-500" />
+      case 'image':
+        return <FileText className="h-5 w-5 text-purple-500" />
+      case 'text':
+        return <FileText className="h-5 w-5 text-gray-500" />
+      default:
+        return <FileText className="h-5 w-5 text-gray-400" />
+    }
+  }
+
   const handleLessonSelect = (lesson: Lesson) => {
     setCurrentLesson(lesson)
     setDuration(lesson.duration)
     setCurrentTime(0)
     setIsPlaying(false)
+    
+    // Fetch documents and video for this lesson
+    fetchDocuments(lesson.id)
+    fetchVideo(lesson.id)
   }
 
   if (!isLoggedIn) {
@@ -281,13 +381,28 @@ export default function LearnPage() {
         <div className="flex-1 flex flex-col">
           <div className="flex-1 bg-black relative">
             {/* Video Player */}
-                         <div className="w-full h-full flex items-center justify-center">
-               <VideoPlayer
-                 src={"https://s3-hcm5-r1.longvan.net/19428351-course/uploads/1754236494324-5qm0l6om79p.mp4"}
-                 className="w-full h-full"
-                 autoPlay={false}
-               />
-             </div>
+            <div className="w-full h-full flex items-center justify-center">
+              {videoLoading ? (
+                <div className="text-center text-white">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" />
+                  <p className="text-sm">Đang tải video...</p>
+                </div>
+              ) : currentVideo ? (
+                <VideoPlayer
+                  src={currentVideo.url}
+                  className="w-full h-full"
+                  autoPlay={false}
+                />
+              ) : (
+                <div className="text-center text-white">
+                  <FileText className="h-16 w-16 mx-auto mb-3 text-gray-400" />
+                  <p className="text-sm">Chưa có video cho bài học này</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Video có thể được thêm vào trường video_url hoặc upload file video
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Video Controls */}
             {/* <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 sm:p-4">
@@ -380,12 +495,48 @@ export default function LearnPage() {
             ) : (
               <ScrollArea className="h-full">
                 <div className="p-4">
-                  <div className="text-center py-8">
-                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">Tính năng tài liệu sẽ được phát triển sau</p>
-                  </div>
+                  {documentsLoading ? (
+                    <div className="text-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-blue-500" />
+                      <p className="text-gray-500 text-sm">Đang tải tài liệu...</p>
+                    </div>
+                  ) : documents.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-gray-900">Tài liệu bài học</h4>
+                      {documents.map((doc) => (
+                        <div key={doc.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center space-x-3">
+                            {getFileIconComponent(doc.icon)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {doc.filename}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatFileSize(doc.fileSize)} • {new Date(doc.uploadedAt).toLocaleDateString('vi-VN')}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(doc.downloadUrl, '_blank')}
+                              className="flex-shrink-0"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 text-sm">Chưa có tài liệu nào cho bài học này</p>
+                      <p className="text-gray-400 text-xs mt-1">Tài liệu bao gồm: PDF, Word, Excel, PowerPoint, hình ảnh</p>
+                    </div>
+                  )}
 
                   <Separator className="my-6" />
+
 
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Mô tả bài học</h4>
@@ -403,16 +554,56 @@ export default function LearnPage() {
         <div className="hidden md:block w-80 border-l bg-white">
           <div className="p-4 border-b">
             <h3 className="font-semibold text-gray-900">Tài liệu bài học</h3>
+            <p className="text-xs text-gray-500 mt-1">PDF, Word, Excel, PowerPoint và hình ảnh</p>
           </div>
 
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="p-4">
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">Tính năng tài liệu sẽ được phát triển sau</p>
-              </div>
+              {documentsLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-blue-500" />
+                  <p className="text-gray-500 text-sm">Đang tải tài liệu...</p>
+                </div>
+              ) : documents.length > 0 ? (
+                <div className="space-y-3 mb-6">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start space-x-3">
+                        {getFileIconComponent(doc.icon)}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {doc.filename}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatFileSize(doc.fileSize)}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(doc.uploadedAt).toLocaleDateString('vi-VN')}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(doc.downloadUrl, '_blank')}
+                          className="flex-shrink-0"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 mb-6">
+                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm">Chưa có tài liệu nào cho bài học này</p>
+                  <p className="text-gray-400 text-xs mt-1">Tài liệu bao gồm: PDF, Word, Excel, PowerPoint, hình ảnh</p>
+                </div>
+              )}
 
               <Separator className="my-6" />
+
+          
 
               <div>
                 <h4 className="font-medium text-gray-900 mb-3">Mô tả bài học</h4>

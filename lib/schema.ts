@@ -7,6 +7,10 @@ export const createUsersTable = sql`
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    school VARCHAR(255),
+    city VARCHAR(100),
+    grade VARCHAR(50),
     avatar_url VARCHAR(500),
     role VARCHAR(50) DEFAULT 'student',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -75,6 +79,7 @@ export const createUploadsTable = sql`
   CREATE TABLE IF NOT EXISTS uploads (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
+    lesson_id INTEGER REFERENCES lessons(id),
     filename VARCHAR(255) NOT NULL,
     original_name VARCHAR(255) NOT NULL,
     file_size INTEGER NOT NULL,
@@ -86,6 +91,52 @@ export const createUploadsTable = sql`
   );
 `;
 
+// Tạo bảng login_sessions (để theo dõi IP đăng nhập)
+export const createLoginSessionsTable = sql`
+  CREATE TABLE IF NOT EXISTS login_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    ip_address VARCHAR(45) NOT NULL,
+    user_agent TEXT,
+    login_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`;
+
+// Tạo index cho bảng login_sessions
+export const createLoginSessionsUserIdIndex = sql`
+  CREATE INDEX IF NOT EXISTS idx_login_sessions_user_id ON login_sessions(user_id);
+`;
+
+export const createLoginSessionsLoginAtIndex = sql`
+  CREATE INDEX IF NOT EXISTS idx_login_sessions_login_at ON login_sessions(login_at);
+`;
+
+// Tạo bảng admin_alerts (để lưu cảnh báo gửi cho admin)
+export const createAdminAlertsTable = sql`
+  CREATE TABLE IF NOT EXISTS admin_alerts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    alert_type VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    details JSONB,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`;
+
+// Tạo index cho bảng admin_alerts
+export const createAdminAlertsCreatedAtIndex = sql`
+  CREATE INDEX IF NOT EXISTS idx_admin_alerts_created_at ON admin_alerts(created_at);
+`;
+
+export const createAdminAlertsIsReadIndex = sql`
+  CREATE INDEX IF NOT EXISTS idx_admin_alerts_is_read ON admin_alerts(is_read);
+`;
+
+export const createAdminAlertsUserIdIndex = sql`
+  CREATE INDEX IF NOT EXISTS idx_admin_alerts_user_id ON admin_alerts(user_id);
+`;
+
 // Hàm khởi tạo tất cả bảng
 export const initializeDatabase = async () => {
   try {
@@ -95,6 +146,13 @@ export const initializeDatabase = async () => {
     await createEnrollmentsTable;
     await createProgressTable;
     await createUploadsTable;
+    await createLoginSessionsTable;
+    await createLoginSessionsUserIdIndex;
+    await createLoginSessionsLoginAtIndex;
+    await createAdminAlertsTable;
+    await createAdminAlertsCreatedAtIndex;
+    await createAdminAlertsIsReadIndex;
+    await createAdminAlertsUserIdIndex;
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Error initializing database:', error);
