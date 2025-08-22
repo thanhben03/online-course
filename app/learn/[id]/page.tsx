@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import Header from "@/components/header"
 import VideoPlayer from "@/components/video-player"
 import { apiClient } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 import {
   BookOpen,
   ChevronDown,
@@ -43,6 +44,8 @@ interface Lesson {
   order_index: number
   created_at: string
   updated_at: string
+  completed?: boolean
+  watched_duration?: number
 }
 
 interface Course {
@@ -81,6 +84,7 @@ interface Video {
 export default function LearnPage() {
   const params = useParams()
   const router = useRouter()
+  const { toast } = useToast()
   const courseId = Number.parseInt(params.id as string)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userInfo, setUserInfo] = useState<any>(null)
@@ -97,6 +101,9 @@ export default function LearnPage() {
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null)
   const [videoLoading, setVideoLoading] = useState(false)
+  const [courseProgress, setCourseProgress] = useState<any>(null)
+  const [lessonProgress, setLessonProgress] = useState<{[key: number]: any}>({})
+  const [videoProgress, setVideoProgress] = useState({ watchedDuration: 0, totalDuration: 0, percentageWatched: 0 })
 
   // Fetch documents for a lesson
   const fetchDocuments = async (lessonId: number) => {
@@ -140,6 +147,150 @@ export default function LearnPage() {
     }
   }
 
+  // Ensure user is enrolled and fetch progress
+  const ensureEnrollmentAndFetchProgress = async (userId: number) => {
+    try {
+      // First try to get existing progress
+      let result = await apiClient.getCourseProgress(courseId, userId)
+      console.log('Initial progress check:', result)
+      
+      // If no enrollment found, auto-enroll the user
+      if (result.success && result.data?.data && !result.data.data.enrollment) {
+        console.log('No enrollment found, auto-enrolling user...')
+        const enrollResult = await apiClient.enrollInCourse(courseId, userId)
+        console.log('Auto-enroll result:', enrollResult)
+        
+        // Fetch progress again after enrollment
+        result = await apiClient.getCourseProgress(courseId, userId)
+        console.log('Progress after enrollment:', result)
+      }
+      
+      if (result.success && result.data) {
+        // Handle nested data structure - API returns { data: { progress, lessonProgress } }
+        const progressData = result.data.data || result.data
+        console.log('Final progressData:', progressData)
+        
+        setCourseProgress(progressData)
+        
+        // Update lessons with progress data
+        const progressMap: {[key: number]: any} = {}
+        if (progressData?.lessonProgress) {
+          progressData.lessonProgress.forEach((lessonProg: any) => {
+            progressMap[lessonProg.id] = lessonProg
+          })
+          setLessonProgress(progressMap)
+          console.log('lessonProgress map:', progressMap)
+        }
+      }
+    } catch (error) {
+      console.error('Error in ensureEnrollmentAndFetchProgress:', error)
+    }
+  }
+
+  // Fetch course progress
+  const fetchCourseProgress = async (userId: number) => {
+    try {
+      const result = await apiClient.getCourseProgress(courseId, userId)
+      console.log('fetchCourseProgress result:', result)
+      
+      if (result.success && result.data) {
+        // Handle nested data structure - API returns { data: { progress, lessonProgress } }
+        const progressData = result.data.data || result.data
+        console.log('progressData:', progressData)
+        
+        setCourseProgress(progressData)
+        
+        // Update lessons with progress data
+        const progressMap: {[key: number]: any} = {}
+        if (progressData?.lessonProgress) {
+          progressData.lessonProgress.forEach((lessonProg: any) => {
+            progressMap[lessonProg.id] = lessonProg
+          })
+          setLessonProgress(progressMap)
+          console.log('lessonProgress map:', progressMap)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching course progress:', error)
+    }
+  }
+
+  // Handle video progress updates
+  const handleVideoProgressUpdate = (watchedDuration: number, totalDuration: number, percentageWatched: number) => {
+    setVideoProgress({ watchedDuration, totalDuration, percentageWatched })
+  }
+
+  // Mark lesson as completed with validation
+  const markLessonCompleted = async (lessonId: number, completed: boolean = true) => {
+    if (!userInfo || !currentLesson) return
+    
+    try {
+      // Get current watched duration and total duration
+      const watchedDuration = lessonId === currentLesson.id 
+        ? videoProgress.watchedDuration 
+        : lessonProgress[lessonId]?.watched_duration || 0
+      
+      const totalDuration = lessonId === currentLesson.id 
+        ? videoProgress.totalDuration 
+        : lessonProgress[lessonId]?.duration || 0
+
+      const result = await apiClient.updateLessonProgress(lessonId, {
+        userId: userInfo.id,
+        completed,
+        watchedDuration,
+        totalDuration // Include total duration for backend validation
+      })
+      
+      if (result.success) {
+        // Refresh course progress
+        await fetchCourseProgress(userInfo.id)
+        
+        if (completed) {
+          toast({
+            title: "Hoàn thành bài học!",
+            description: "Bạn đã hoàn thành bài học thành công.",
+          })
+        }
+      } else {
+        // Show error message to user
+        toast({
+          title: "Không thể hoàn thành",
+          description: result.error || 'Không thể đánh dấu hoàn thành bài học',
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error updating lesson progress:', error)
+      toast({
+        title: "Lỗi",
+        description: 'Có lỗi xảy ra khi cập nhật tiến trình',
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Check if user can complete current lesson
+  const canCompleteCurrentLesson = () => {
+    if (!currentLesson) return false
+    
+    // Check if we have video progress from current session
+    if (videoProgress.totalDuration > 0) {
+      const requiredPercentage = 90
+      return videoProgress.percentageWatched >= requiredPercentage
+    }
+    
+    // Fallback to stored progress data
+    const storedProgress = lessonProgress[currentLesson.id]
+    if (storedProgress && storedProgress.duration > 0) {
+      const requiredPercentage = 90
+      const watchedPercentage = (storedProgress.watched_duration / storedProgress.duration) * 100
+      return watchedPercentage >= requiredPercentage
+    }
+    
+    // If no duration data available, can't complete
+    return false
+  }
+
   useEffect(() => {
     const loggedIn = localStorage.getItem("isLoggedIn")
     const user = localStorage.getItem("userInfo")
@@ -170,6 +321,12 @@ export default function LearnPage() {
         if (lessonsResult.success && lessonsResult.data) {
           const sortedLessons = lessonsResult.data.lessons.sort((a: Lesson, b: Lesson) => a.order_index - b.order_index)
           setLessons(sortedLessons)
+          
+          // Fetch course progress and auto-enroll if needed
+          if (user) {
+            const userObj = JSON.parse(user)
+            await ensureEnrollmentAndFetchProgress(userObj.id)
+          }
           
           // Set first lesson as current
           if (sortedLessons.length > 0) {
@@ -308,8 +465,9 @@ export default function LearnPage() {
   }
 
   const chapters = getChapters()
-  const completedLessons = 0 // TODO: Implement progress tracking
-  const totalLessons = lessons.length
+  const completedLessons = courseProgress?.progress?.completedLessons || 0
+  const totalLessons = courseProgress?.progress?.totalLessons || lessons.length
+  const progressPercentage = courseProgress?.progress?.percentage || 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -331,8 +489,8 @@ export default function LearnPage() {
         }`}>
           <div className="p-4 border-b">
             <h2 className="font-semibold text-gray-900 mb-2">Nội dung khóa học</h2>
-            <Progress value={totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0} className="h-2" />
-            <p className="text-sm text-gray-600 mt-2">{completedLessons}/{totalLessons} bài đã hoàn thành</p>
+            <Progress value={progressPercentage} className="h-2" />
+            <p className="text-sm text-gray-600 mt-2">{completedLessons}/{totalLessons} bài đã hoàn thành ({progressPercentage}%)</p>
           </div>
 
           <ScrollArea className="h-[calc(100vh-8rem)]">
@@ -354,11 +512,44 @@ export default function LearnPage() {
                         }}
                       >
                         <div className="flex items-center space-x-3 w-full">
-                          <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          {lessonProgress[lesson.id]?.completed ? (
+                            <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          )}
                           <div className="flex-1 text-left">
                             <div className="font-medium text-sm">{lesson.title}</div>
                             <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
                           </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="flex-shrink-0 p-1"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              markLessonCompleted(lesson.id, !lessonProgress[lesson.id]?.completed)
+                            }}
+                            disabled={
+                              lesson.id === currentLesson?.id && 
+                              !lessonProgress[lesson.id]?.completed && 
+                              !canCompleteCurrentLesson()
+                            }
+                            title={
+                              lesson.id === currentLesson?.id && 
+                              !lessonProgress[lesson.id]?.completed && 
+                              !canCompleteCurrentLesson()
+                                ? "Bạn cần xem ít nhất 90% video để hoàn thành bài học"
+                                : ""
+                            }
+                          >
+                            {lessonProgress[lesson.id]?.completed ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : lesson.id === currentLesson?.id && canCompleteCurrentLesson() ? (
+                              <Circle className="h-4 w-4 text-green-400 animate-pulse" />
+                            ) : (
+                              <Circle className="h-4 w-4 text-gray-400" />
+                            )}
+                          </Button>
                         </div>
                       </Button>
                     ))}
@@ -392,6 +583,9 @@ export default function LearnPage() {
                   src={currentVideo.url}
                   className="w-full h-full"
                   autoPlay={false}
+                  lessonId={currentLesson?.id}
+                  userId={userInfo?.id}
+                  onProgressUpdate={handleVideoProgressUpdate}
                 />
               ) : (
                 <div className="text-center text-white">
@@ -403,6 +597,45 @@ export default function LearnPage() {
                 </div>
               )}
             </div>
+
+            {/* Video Progress Indicator */}
+            {currentVideo && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                <div className="space-y-2">
+                  {videoProgress.totalDuration > 0 ? (
+                    <>
+                      <div className="flex items-center justify-between text-white text-sm">
+                        <span>Tiến trình xem video</span>
+                        <span>{videoProgress.percentageWatched}%</span>
+                      </div>
+                      <Progress 
+                        value={videoProgress.percentageWatched} 
+                        className="h-1 bg-white/20"
+                      />
+                      <div className="flex items-center justify-between text-xs text-white/70">
+                        <span>
+                          {Math.floor(videoProgress.watchedDuration / 60)}:{(videoProgress.watchedDuration % 60).toString().padStart(2, '0')} / {Math.floor(videoProgress.totalDuration / 60)}:{(videoProgress.totalDuration % 60).toString().padStart(2, '0')}
+                        </span>
+                        {videoProgress.percentageWatched >= 90 ? (
+                          <span className="text-green-400 flex items-center">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Có thể hoàn thành
+                          </span>
+                        ) : (
+                          <span className="text-yellow-400">
+                            Cần xem ít nhất 90%
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center text-white/70 text-xs">
+                      <span>Đang tải thông tin video...</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Video Controls */}
             {/* <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 sm:p-4">
@@ -479,11 +712,44 @@ export default function LearnPage() {
                             onClick={() => handleLessonSelect(lesson)}
                           >
                             <div className="flex items-center space-x-3 w-full">
-                              <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              {lessonProgress[lesson.id]?.completed ? (
+                                <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                              ) : (
+                                <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              )}
                               <div className="flex-1 text-left">
                                 <div className="font-medium text-sm">{lesson.title}</div>
                                 <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
                               </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="flex-shrink-0 p-1"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  markLessonCompleted(lesson.id, !lessonProgress[lesson.id]?.completed)
+                                }}
+                                disabled={
+                                  lesson.id === currentLesson?.id && 
+                                  !lessonProgress[lesson.id]?.completed && 
+                                  !canCompleteCurrentLesson()
+                                }
+                                title={
+                                  lesson.id === currentLesson?.id && 
+                                  !lessonProgress[lesson.id]?.completed && 
+                                  !canCompleteCurrentLesson()
+                                    ? "Bạn cần xem ít nhất 90% video để hoàn thành bài học"
+                                    : ""
+                                }
+                              >
+                                {lessonProgress[lesson.id]?.completed ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : lesson.id === currentLesson?.id && canCompleteCurrentLesson() ? (
+                                  <Circle className="h-4 w-4 text-green-400 animate-pulse" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-gray-400" />
+                                )}
+                              </Button>
                             </div>
                           </Button>
                         ))}

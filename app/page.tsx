@@ -81,7 +81,7 @@ const testimonials = [
         role: "Học viên Olympic Toán",
         avatar: "/placeholder-user.jpg",
         content:
-            "Cảm ơn anh ạ, thực sự tự đọc giáo trình em chả hiểu gì luôn. Lần đầu tiên, em thấy có kênh Việt Nam miêu tả trực quan các định nghĩa toán học như thế này. Ngày trước em phải từ mò qua các kênh nước ngoài xem, kênh rất hay nên anh tiếp tục làm video nhé.",
+            "Cảm ơn anh ạ, thực sự tự đọc giáo trình em chả hiểu gì luôn. Lần đầu tiên, em thấy có kênh Việt Nam miêu tả trực quan các định nghĩa toán học như thế này. Ngày trước em phải tự mò qua các kênh nước ngoài xem, kênh rất hay nên anh tiếp tục làm video nhé.",
         rating: 5,
     },
     {
@@ -135,7 +135,7 @@ export default async function HomePage() {
                             Olympic toán giải tích
                         </Badge>
                         <h1 className="text-4xl md:text-4xl font-bold text-gray-900 mb-6">
-                            Khoá học Olympic toán giải Giải tích từ cơ bản đến
+                            Khoá học Olympic toán Giải tích từ cơ bản đến
                             <span className="text-blue-600"> nâng cao</span>
                         </h1>
                         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
@@ -357,10 +357,10 @@ export default async function HomePage() {
                 <div className="container mx-auto">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                            Giảng viên hàng đầu
+                            Người đồng hành
                         </h2>
                         <p className="text-gray-600 max-w-2xl mx-auto">
-                            Học từ những chuyên gia có kinh nghiệm thực tế trong ngành
+                            Người sẵn sàng chia sẻ và hỗ trợ bạn trên con đường chinh phục giải tích
                         </p>
                     </div>
 
@@ -402,7 +402,7 @@ export default async function HomePage() {
                                             {instructor.courses} khóa học
                                         </span>
                                         <span>
-                                            {instructor.students} học viên
+                                            {instructor.students} bài giảng
                                         </span>
                                     </div>
 
@@ -494,16 +494,21 @@ export default async function HomePage() {
                         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                             Để đảm bảo chất lượng và thời gian quan tâm cho người học
                         </h2>
-                        <p className="text-xl text-blue-100 mb-8">
-                            Mỗi năm chỉ nhận 30 sinh viên
-                        </p>
+                        <div className="mb-8">
+                            <div className="inline-block relative">
+                                <p className="text-2xl md:text-3xl font-bold text-yellow-300 mb-2 animate-pulse">
+                                    🔥 Mỗi năm chỉ nhận 30 sinh viên 🔥
+                                </p>
+
+                            </div>
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Link href="/login">
                                 <Button
                                     size="lg"
                                     className="bg-white text-black hover:bg-gray-100 px-8 py-3"
                                 >
-                                    Học phí 1tr5
+                                    Học phí 1.500.000 VNĐ
                                 </Button>
                             </Link>
                             <Link href="/courses">
@@ -532,7 +537,7 @@ export default async function HomePage() {
                                 </span>
                             </div>
                             <p className="text-gray-400 text-sm mb-4">
-                                Nền tảng học tập trực tuyến Olympic Toán Giải Tích, THPT, Manim
+                                Nền tảng học tập trực tuyến Olympic Toán Giải Tích, Toán THPT, Manim
                             </p>
                             <div className="flex space-x-4">
                                 <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
@@ -554,7 +559,7 @@ export default async function HomePage() {
                                         href="#"
                                         className="hover:text-white transition-colors"
                                     >
-                                        Lập trình
+                                        Olympic Toán Giải Tích
                                     </Link>
                                 </li>
                                 <li>
@@ -562,23 +567,16 @@ export default async function HomePage() {
                                         href="#"
                                         className="hover:text-white transition-colors"
                                     >
-                                        Thiết kế
+                                        Toán THPT
                                     </Link>
                                 </li>
+                                
                                 <li>
                                     <Link
                                         href="#"
                                         className="hover:text-white transition-colors"
                                     >
-                                        Marketing
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link
-                                        href="#"
-                                        className="hover:text-white transition-colors"
-                                    >
-                                        Kinh doanh
+                                        Ứng dụng Manim trong dạy học
                                     </Link>
                                 </li>
                             </ul>

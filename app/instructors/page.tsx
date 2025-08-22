@@ -36,44 +36,49 @@ const instructor = {
     id: 1,
     name: "Nguyễn Hoàng Duy",
     title: "Admin/Founder",
-    bio: "Giảng viên Olympic Toán với 8+ năm kinh nghiệm giảng dạy và nghiên cứu. Chuyên gia về Giải tích, Đại số và Hình học. Từng đạt giải cao tại các kỳ thi Olympic Toán quốc tế và hiện đang phụ trách nhiều chuyên đề toán học nâng cao.",
+    bio: "Giảng viên Olympic Toán với 5 năm kinh nghiệm giảng dạy và nghiên cứu. Chuyên gia về Giải tích, Đại số và Hình học. Từng đạt giải cao tại các kỳ thi Olympic Toán quốc tế và hiện đang phụ trách nhiều chuyên đề toán học nâng cao.",
     company: "Olympic Toán Giải Tích",
     avatar: "/placeholder-user.jpg",
     courses: 7,
     students: 2500,
     rating: 4.9,
     totalRatings: 450,
-    expertise: ["Olympic Toán", "Giải Tích", "Đại Số", "Hình Học", "Manim", "VJIMC"],
+    expertise: ["Olympic Toán", "Giải Tích", "Toán THPT", "Manim", "VJIMC"],
     education: [
         {
-            degree: "Thạc sĩ Toán học",
-            school: "Đại học Quốc gia Hà Nội",
-            year: "2018-2020"
+            degree: "Thạc sĩ Toán ứng dụng",
+            school: "Đại học Cần Thơ",
+            year: "2025-2027"
         },
         {
-            degree: "Cử nhân Toán học",
-            school: "Đại học Sư phạm Hà Nội",
-            year: "2014-2018"
+            degree: "Cử nhân Sư phạm Toán học - K47",
+            school: "Trường Sư phạm - Đại học Cần Thơ",
+            year: "2021-2025"
+        },
+        {
+            degree: "Du học - thực tập",
+            school: "Đại học Ostra - Cộng Hoà Séc",
+            year: "8/2024 - 7/2025"
         }
     ],
     achievements: [
-        "Giải Nhất Olympic Toán Quốc gia 2017",
-        "Top 10 VJIMC 2016",
-        "Chứng chỉ giảng dạy Manim từ 3Blue1Brown",
-        "2000+ subscribers trên YouTube"
+        "Học bổng du học Châu Âu",
+        "Top 1 (BXH ĐHCT) VJIMC 2025",
+        "Giải nhất NCKH (ĐHCT) Ứng dụng Manim trong dạy học Toán",
+        "300+ member"
     ],
     experience: [
         {
             position: "Founder & Giảng viên chính",
             company: "Olympic Toán Giải Tích",
-            period: "2020 - Hiện tại",
+            period: "2023 - Hiện tại",
             description: "Xây dựng và phát triển nền tảng học tập Olympic Toán trực tuyến, thiết kế chương trình học và giảng dạy trực tiếp."
         },
         {
-            position: "Giảng viên Toán",
-            company: "Trung tâm Olympic Toán VinEdu",
-            period: "2018 - 2020",
-            description: "Giảng dạy các lớp Olympic Toán cấp THPT, hướng dẫn học sinh tham gia các kỳ thi quốc gia và quốc tế."
+            position: "Giáo viên Toán",
+            company: "Hệ thống giáo dục Akadon Education",
+            period: "2021 - Hiện tại",
+            description: ""
         }
     ],
     contact: {
@@ -85,9 +90,9 @@ const instructor = {
     },
     teachingPhilosophy: "Toán học không chỉ là những con số và công thức, mà là cách tư duy logic và giải quyết vấn đề. Tôi tin rằng mọi học sinh đều có thể làm chủ toán học nếu được hướng dẫn đúng cách và có động lực phù hợp.",
     stats: [
-        { label: "Năm kinh nghiệm", value: "8+", icon: <Calendar className="h-5 w-5" /> },
-        { label: "Học viên", value: "2,500+", icon: <Users className="h-5 w-5" /> },
-        { label: "Khóa học", value: "7", icon: <BookOpen className="h-5 w-5" /> },
+        { label: "Năm kinh nghiệm", value: "5", icon: <Calendar className="h-5 w-5" /> },
+        { label: "Subscribers", value: "2,500+", icon: <Users className="h-5 w-5" /> },
+        { label: "Khoá học", value: "7", icon: <BookOpen className="h-5 w-5" /> },
         { label: "Đánh giá", value: "4.9/5", icon: <Star className="h-5 w-5" /> }
     ]
 };
@@ -226,7 +231,7 @@ export default function InstructorsPage() {
                                 </Card>
 
                                 {/* Teaching Philosophy */}
-                                <Card className="border-0 shadow-lg">
+                                {/* <Card className="border-0 shadow-lg">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <Target className="h-5 w-5 text-blue-600" />
@@ -238,7 +243,7 @@ export default function InstructorsPage() {
                                             "{instructor.teachingPhilosophy}"
                                         </p>
                                     </CardContent>
-                                </Card>
+                                </Card> */}
 
                                 {/* Education */}
                                 <Card className="border-0 shadow-lg">
@@ -280,6 +285,25 @@ export default function InstructorsPage() {
                                                 </div>
                                             ))}
                                         </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-0 shadow-lg">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Target className="h-5 w-5 text-blue-600" />
+                                            Nghiên cứu khoa học
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ul className="list-disc list-inside text-gray-700">
+                                            <li>
+                                                Đề tài "Bài toán vị trí liên thông không mong muốn trên cây"
+                                            </li>
+                                            <li>
+                                                Đề tài "Thiết kế hệ thống phương tiện trực quan bằng công cụ trí tuệ nhân tạo phục vụ dạy học Toán ở THPT theo chương trình Giáo Dục phổ thông năm 2018"
+                                            </li>
+                                        </ul>
                                     </CardContent>
                                 </Card>
 

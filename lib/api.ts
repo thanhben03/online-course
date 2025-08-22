@@ -137,6 +137,35 @@ class ApiClient {
       body: JSON.stringify(lessonData),
     });
   }
+
+  // Progress APIs
+  async getLessonProgress(lessonId: number, userId: number) {
+    return this.request<{ progress: any }>(`/api/progress/${lessonId}?userId=${userId}`);
+  }
+
+  async updateLessonProgress(lessonId: number, progressData: {
+    userId: number;
+    watchedDuration?: number;
+    completed?: boolean;
+    totalDuration?: number;
+    forceComplete?: boolean;
+  }) {
+    return this.request<{ progress: any }>(`/api/progress/${lessonId}`, {
+      method: 'POST',
+      body: JSON.stringify(progressData),
+    });
+  }
+
+  async getCourseProgress(courseId: number, userId: number) {
+    return this.request<{ data: any }>(`/api/progress/course/${courseId}?userId=${userId}`);
+  }
+
+  async enrollInCourse(courseId: number, userId: number) {
+    return this.request<{ enrollment: any }>(`/api/progress/course/${courseId}`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient(); 
