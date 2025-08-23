@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import sql from '@/lib/db'
+import { createAdminAuthError, verifyAdminAuth } from '@/lib/middleware/adminAuth'
+import { userService } from '@/lib/services/userService'
 
 // GET - Lấy danh sách tất cả users
-export async function GET() {
+export async function GET(request: NextRequest) {
+  try {
+    // Lấy thông tin admin từ headers
+    const adminUserId = request.headers.get('X-Admin-ID')
+    const adminEmail = request.headers.get('X-Admin-Email')
+    
+    if (!adminUserId || !adminEmail) {
+      return createAdminAuthError()
+    }
+
+    // Verify admin user
+    const adminUser = await userService.findById(parseInt(adminUserId))
+    if (!adminUser || adminUser.email !== adminEmail || adminUser.role !== 'admin') {
+      return createAdminAuthError()
+    }
+  } catch (error) {
+    return createAdminAuthError()
+  }
   try {
     const users = await sql`
       SELECT 
@@ -28,6 +47,11 @@ export async function GET() {
 
 // POST - Tạo user mới
 export async function POST(request: NextRequest) {
+  // Kiểm tra quyền admin
+  const adminUser = await verifyAdminAuth(request)
+  if (!adminUser) {
+    return createAdminAuthError()
+  }
   try {
     const body = await request.json()
     const { name, email, phone, school, city, grade, password } = body

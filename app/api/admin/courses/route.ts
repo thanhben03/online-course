@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import sql from '@/lib/db'
+import { verifyAdminAuth, createAdminAuthError } from '@/lib/middleware/adminAuth'
 
 // GET - Lấy danh sách tất cả courses với thống kê
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Kiểm tra quyền admin
+  const adminUser = await verifyAdminAuth(request)
+  if (!adminUser) {
+    return createAdminAuthError()
+  }
   try {
     const courses = await sql`
       SELECT 
@@ -31,6 +37,11 @@ export async function GET() {
 
 // POST - Tạo course mới
 export async function POST(request: NextRequest) {
+  // Kiểm tra quyền admin
+  const adminUser = await verifyAdminAuth(request)
+  if (!adminUser) {
+    return createAdminAuthError()
+  }
   try {
     const body = await request.json()
     const { title, description, price, status } = body

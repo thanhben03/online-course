@@ -87,6 +87,8 @@ export default function SecurityAlerts() {
     switch (alertType) {
       case 'multiple_ip_login':
         return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+      case 'devtools_detected':
+        return <AlertTriangle className="h-4 w-4 text-red-500" />;
       default:
         return <Shield className="h-4 w-4 text-blue-500" />;
     }
@@ -96,13 +98,17 @@ export default function SecurityAlerts() {
     switch (alertType) {
       case 'multiple_ip_login':
         return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'devtools_detected':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-blue-100 text-blue-800 border-blue-200';
     }
   };
 
   const AlertCard = ({ alert, showMarkAsRead = true }: { alert: AdminAlert; showMarkAsRead?: boolean }) => {
-    const details = alert.details ? JSON.parse(alert.details) : null;
+    const details = alert.details ? 
+      (typeof alert.details === 'string' ? JSON.parse(alert.details) : alert.details) 
+      : null;
     
     return (
       <Card className={`mb-4 ${alert.is_read ? 'opacity-75' : 'border-orange-200'}`}>
@@ -123,7 +129,9 @@ export default function SecurityAlerts() {
             </div>
             <div className="flex items-center space-x-2">
               <span className={`px-2 py-1 rounded-full text-xs ${getAlertBadgeColor(alert.alert_type)}`}>
-                {alert.alert_type === 'multiple_ip_login' ? 'Đăng nhập đa IP' : alert.alert_type}
+                {alert.alert_type === 'multiple_ip_login' ? 'Đăng nhập đa IP' : 
+                 alert.alert_type === 'devtools_detected' ? 'Phát hiện DevTools' : 
+                 alert.alert_type}
               </span>
               {!alert.is_read && showMarkAsRead && (
                 <Button

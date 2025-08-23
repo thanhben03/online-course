@@ -124,7 +124,7 @@ export default function Header({
                         <Link href="/" className="flex items-center space-x-2">
                             <BookOpen className="h-8 w-8 text-blue-600" />
                             <span className="text-xl font-bold text-gray-900">
-                                EduPlatform
+                                Nhật Minh Anh Education
                             </span>
                         </Link>
                     </div>
@@ -146,20 +146,9 @@ export default function Header({
                             href="/instructors"
                             className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
                         >
-                            Giảng viên
+                            Về tôi
                         </Link>
-                        <Link
-                            href="/upload-test"
-                            className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
-                        >
-                            Upload Test
-                        </Link>
-                        <Link
-                            href="/admin"
-                            className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
-                        >
-                            Admin
-                        </Link>
+
                         <Link
                             href="/profile"
                             className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
@@ -229,13 +218,7 @@ export default function Header({
                             >
                                 Upload Test
                             </Link>
-                            <Link
-                                href="/admin"
-                                className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                Admin
-                            </Link>
+
                             <Link
                                 href="/profile"
                                 className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
@@ -309,12 +292,6 @@ export default function Header({
                         Về tôi
                     </Link>
 
-                    <Link
-                        href="/admin"
-                        className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
-                    >
-                        Admin
-                    </Link>
                     <Link
                         href="/profile"
                         className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"

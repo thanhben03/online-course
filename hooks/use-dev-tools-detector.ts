@@ -1,10 +1,45 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export function useDevToolsDetector() {
   const [isDevToolsOpen, setIsDevToolsOpen] = useState(false)
+  const [warningCount, setWarningCount] = useState(0)
+  const warningCountRef = useRef<number>(0)
+  const previousStateRef = useRef<boolean>(false) // Trạng thái trước đó
+  const devToolsOpenTime = useRef<number>(0) // Thời gian bắt đầu mở DevTools
+  const [shouldSendTimeoutAlert, setShouldSendTimeoutAlert] = useState(false)
 
   useEffect(() => {
     let devToolsInterval: NodeJS.Timeout
+
+    // Helper function để đếm khi có sự chuyển đổi từ đóng sang mở
+    const handleDevToolsOpened = () => {
+      if (!previousStateRef.current) { // Chỉ đếm khi chuyển từ đóng sang mở
+        warningCountRef.current += 1
+        setWarningCount(warningCountRef.current)
+        devToolsOpenTime.current = Date.now() // Ghi lại thời gian mở
+        console.log(`🚨 DevTools opened - Count: ${warningCountRef.current}`)
+      }
+      previousStateRef.current = true
+      setIsDevToolsOpen(true)
+    }
+
+    const handleDevToolsClosed = () => {
+      previousStateRef.current = false
+      devToolsOpenTime.current = 0 // Reset thời gian
+      setShouldSendTimeoutAlert(false) // Reset timeout alert
+      setIsDevToolsOpen(false)
+    }
+
+    // Kiểm tra xem DevTools đã mở quá 5 giây chưa
+    const checkTimeoutAlert = () => {
+      if (previousStateRef.current && devToolsOpenTime.current > 0) {
+        const openDuration = Date.now() - devToolsOpenTime.current
+        if (openDuration >= 5000 && !shouldSendTimeoutAlert) { // 5 giây
+          setShouldSendTimeoutAlert(true)
+          console.log(`🚨 DevTools open for more than 5 seconds - sending timeout alert`)
+        }
+      }
+    }
 
     const detectDevTools = () => {
       // Method 1: Check window size difference
@@ -13,7 +48,7 @@ export function useDevToolsDetector() {
       const heightThreshold = window.outerHeight - window.innerHeight > threshold
       
       if (widthThreshold || heightThreshold) {
-        setIsDevToolsOpen(true)
+        handleDevToolsOpened()
         return true
       }
 
@@ -23,7 +58,7 @@ export function useDevToolsDetector() {
       const end = performance.now()
       
       if (end - start > 100) {
-        setIsDevToolsOpen(true)
+        handleDevToolsOpened()
         return true
       }
 
@@ -44,7 +79,7 @@ export function useDevToolsDetector() {
         }
         
         if (devtools.open) {
-          setIsDevToolsOpen(true)
+          handleDevToolsOpened()
           return true
         }
       } catch (e) {
@@ -57,23 +92,27 @@ export function useDevToolsDetector() {
         (window as any).Firebug.chrome && 
         (window as any).Firebug.chrome.isInitialized
       ) {
-        setIsDevToolsOpen(true)
+        handleDevToolsOpened()
         return true
       }
 
       // Method 5: Check for Chrome DevTools
       if (window.outerHeight - window.innerHeight > 200 || 
           window.outerWidth - window.innerWidth > 200) {
-        setIsDevToolsOpen(true)
+        handleDevToolsOpened()
         return true
       }
 
-      setIsDevToolsOpen(false)
+      // Không phát hiện DevTools -> đóng
+      handleDevToolsClosed()
       return false
     }
 
     // Check periodically
-    devToolsInterval = setInterval(detectDevTools, 1000)
+    devToolsInterval = setInterval(() => {
+      detectDevTools()
+      checkTimeoutAlert() // Kiểm tra timeout cảnh báo
+    }, 1000)
 
     // Check on resize
     const handleResize = () => {
@@ -84,7 +123,7 @@ export function useDevToolsDetector() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
         e.preventDefault()
-        setIsDevToolsOpen(true)
+        handleDevToolsOpened()
         return false
       }
     }
@@ -114,5 +153,5 @@ export function useDevToolsDetector() {
     }
   }, [])
 
-  return isDevToolsOpen
+  return { isDevToolsOpen, warningCount, shouldSendTimeoutAlert }
 } 

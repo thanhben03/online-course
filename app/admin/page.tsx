@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -65,10 +66,96 @@ const SecurityAlerts = dynamic(() => import('./components/SecurityAlerts'), {
 type ActiveModule = 'dashboard' | 'courses' | 'upload' | 'lessons' | 'users' | 'security'
 
 export default function AdminPage() {
+  const router = useRouter()
   const [activeModule, setActiveModule] = useState<ActiveModule>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
+  const [adminUser, setAdminUser] = useState<any>(null)
+
+  // Kiểm tra quyền admin khi component load
+  useEffect(() => {
+    const checkAdminAuth = async () => {
+      try {
+        // Kiểm tra localStorage trước
+        const isLoggedIn = localStorage.getItem("isLoggedIn")
+        const userInfo = localStorage.getItem("userInfo")
+        
+        if (!isLoggedIn || !userInfo) {
+          setIsAuthorized(false)
+          router.push('/login?message=' + encodeURIComponent('Bạn cần đăng nhập để truy cập trang admin'))
+          return
+        }
+
+        const user = JSON.parse(userInfo)
+        
+        // Gọi API để kiểm tra quyền admin
+        const response = await fetch('/api/admin/check-auth', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            email: user.email
+          })
+        })
+        
+        const data = await response.json()
+        
+        if (data.authenticated && data.user) {
+          setIsAuthorized(true)
+          setAdminUser(data.user)
+        } else {
+          setIsAuthorized(false)
+          // Redirect đến trang login với thông báo
+          router.push('/login?message=' + encodeURIComponent('Bạn cần đăng nhập với tài khoản admin để truy cập trang này'))
+        }
+      } catch (error) {
+        console.error('Error checking admin auth:', error)
+        setIsAuthorized(false)
+        router.push('/login?message=' + encodeURIComponent('Có lỗi xảy ra khi kiểm tra quyền truy cập'))
+      }
+    }
+
+    checkAdminAuth()
+  }, [router])
+
+  // Hiển thị loading trong khi kiểm tra quyền
+  if (isAuthorized === null) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang kiểm tra quyền truy cập...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Hiển thị thông báo không có quyền (backup case)
+  if (isAuthorized === false) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="mb-4">
+            <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Không có quyền truy cập</h1>
+            <p className="text-gray-600 mb-6">
+              Trang này chỉ dành cho quản trị viên. Vui lòng đăng nhập với tài khoản admin.
+            </p>
+            <Button 
+              onClick={() => router.push('/login')}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Đăng nhập
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const handleInitializeDB = async () => {
     setLoading(true)
@@ -287,6 +374,7 @@ export default function AdminPage() {
               <LayoutDashboard className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold text-gray-900">Admin Panel</span>
             </div>
+
           </div>
 
           {/* Navigation */}

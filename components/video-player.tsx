@@ -26,7 +26,41 @@ export default function VideoPlayer({
   const [totalDuration, setTotalDuration] = useState(0)
   const [isTracking, setIsTracking] = useState(false)
   const progressUpdateInterval = useRef<NodeJS.Timeout | null>(null)
-  const isDevToolsOpen = useDevToolsDetector()
+  const { isDevToolsOpen, warningCount, shouldSendTimeoutAlert } = useDevToolsDetector()
+
+  // Gửi cảnh báo đến admin khi F12 lần thứ 3 hoặc mở quá 5 giây
+  const sendDevToolsAlert = async (count: number, reason: 'count' | 'timeout' = 'count') => {
+    try {
+      // Lấy thông tin user từ localStorage
+      const userInfo = localStorage.getItem("userInfo")
+      if (!userInfo) return
+
+      const user = JSON.parse(userInfo)
+      
+      const response = await fetch('/api/admin/alerts/devtools-warning', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          warningCount: count,
+          currentPage: window.location.pathname,
+          alertReason: reason
+        })
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        const reasonText = reason === 'timeout' ? 'mở quá 5 giây' : `lần ${count}`
+        console.log(`🚨 Cảnh báo DevTools đã được gửi đến admin (${reasonText})`)
+      }
+    } catch (error) {
+      console.error('Error sending DevTools alert:', error)
+    }
+  }
 
   // Video progress tracking functions
   const updateProgress = async (currentTime: number, duration: number) => {
@@ -83,6 +117,13 @@ export default function VideoPlayer({
     setIsTracking(false)
   }
 
+  // Handle timeout alert (mở DevTools quá 5 giây)
+  useEffect(() => {
+    if (shouldSendTimeoutAlert) {
+      sendDevToolsAlert(warningCount, 'timeout')
+    }
+  }, [shouldSendTimeoutAlert])
+
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
@@ -92,6 +133,11 @@ export default function VideoPlayer({
       setShowDevToolsWarning(true)
       if (video) {
         video.pause()
+      }
+      
+      // Gửi cảnh báo đến admin khi đạt lần thứ 3
+      if (warningCount >= 3) {
+        sendDevToolsAlert(warningCount, 'count')
       }
     } else {
       setShowDevToolsWarning(false)
@@ -239,11 +285,21 @@ export default function VideoPlayer({
           <div className="bg-white rounded-lg p-6 max-w-md mx-4 text-center">
             <div className="text-red-600 text-4xl mb-4">⚠️</div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Phát hiện Developer Tools
+              Phát hiện Developer Tools (Lần {warningCount})
             </h3>
             <p className="text-gray-600 mb-4">
               Vui lòng đóng Developer Tools (F12) để tiếp tục xem video. 
               Nếu người dùng cố tình bật Developer Tools nhiều lần, hệ thống sẽ tự động xóa tài khoản của người dùng mà không báo trước
+              {(warningCount >= 3 || shouldSendTimeoutAlert) && (
+                <span className="block mt-2 text-red-600 font-semibold">
+                  🚨 Cảnh báo đã được gửi đến admin!
+                  {shouldSendTimeoutAlert && (
+                    <span className="block text-sm">
+                      (DevTools mở quá 5 giây)
+                    </span>
+                  )}
+                </span>
+              )}
             </p>
             <button
               onClick={handleCloseWarning}
