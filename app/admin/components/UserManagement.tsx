@@ -39,6 +39,7 @@ import {
   Eye,
   EyeOff
 } from "lucide-react"
+import { getAdminHeaders } from '@/lib/api'
 
 interface User {
   id: number
@@ -108,7 +109,11 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/users')
+      const response = await fetch('/api/admin/users', {
+        headers: {
+          ...getAdminHeaders(),
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setUsers(data.users || [])
@@ -136,6 +141,7 @@ export default function UserManagement() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify(createForm),
       })

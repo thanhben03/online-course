@@ -40,6 +40,7 @@ import {
   Eye,
   Users
 } from "lucide-react"
+import { getAdminHeaders } from '@/lib/api'
 
 interface Course {
   id: number
@@ -86,7 +87,9 @@ export default function CourseManagement() {
   const fetchCourses = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/courses')
+      const response = await fetch('/api/admin/courses', {
+        headers: { ...getAdminHeaders() },
+      })
       if (response.ok) {
         const data = await response.json()
         setCourses(data.courses || [])
@@ -114,6 +117,7 @@ export default function CourseManagement() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify({
           ...createForm,
@@ -148,6 +152,7 @@ export default function CourseManagement() {
     try {
       const response = await fetch(`/api/admin/courses/${courseId}`, {
         method: 'DELETE',
+        headers: { ...getAdminHeaders() },
       })
 
       if (response.ok) {

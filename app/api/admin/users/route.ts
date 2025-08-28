@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Verify admin user
     const adminUser = await userService.findById(parseInt(adminUserId))
-    if (!adminUser || adminUser.email !== adminEmail || adminUser.role !== 'admin') {
+    if (!adminUser  || adminUser.role !== 'admin') {
       return createAdminAuthError()
     }
   } catch (error) {

@@ -168,4 +168,21 @@ class ApiClient {
   }
 }
 
+// Headers helper cho các gọi API admin (dựa trên localStorage)
+export function getAdminHeaders(): Record<string, string> {
+  try {
+    if (typeof window === 'undefined') return {}
+    const raw = localStorage.getItem('userInfo')
+    if (!raw) return {}
+    const user = JSON.parse(raw)
+    if (!user?.id || !user?.email) return {}
+    return {
+      'X-Admin-ID': String(user.id),
+      'X-Admin-Email': String(user.email),
+    }
+  } catch {
+    return {}
+  }
+}
+
 export const apiClient = new ApiClient(); 

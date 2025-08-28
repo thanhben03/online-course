@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { getAdminHeaders } from '@/lib/api'
 import { 
   Select,
   SelectContent,
@@ -92,7 +93,9 @@ export default function LessonManagement() {
   // Fetch courses for dropdown
   const fetchCourses = async () => {
     try {
-      const response = await fetch('/api/admin/courses')
+      const response = await fetch('/api/admin/courses', {
+        headers: { ...getAdminHeaders() },
+      })
       if (response.ok) {
         const data = await response.json()
         setCourses(data.courses || [])
@@ -106,7 +109,9 @@ export default function LessonManagement() {
   const fetchLessons = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/lessons')
+      const response = await fetch('/api/admin/lessons', {
+        headers: { ...getAdminHeaders() },
+      })
       if (response.ok) {
         const data = await response.json()
         setLessons(data.lessons || [])
@@ -134,6 +139,7 @@ export default function LessonManagement() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify({
           ...createForm,

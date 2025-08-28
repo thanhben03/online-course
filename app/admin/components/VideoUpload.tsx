@@ -49,6 +49,7 @@ import {
     X,
     Edit,
 } from "lucide-react";
+import { getAdminHeaders } from '@/lib/api'
 
 interface UploadedFile {
     id?: number;
@@ -329,7 +330,9 @@ export default function VideoUpload() {
         const fetchCoursesAndLessons = async () => {
             try {
                 // Fetch courses
-                const coursesResponse = await fetch("/api/admin/courses");
+                const coursesResponse = await fetch("/api/admin/courses", {
+                    headers: { ...getAdminHeaders() },
+                });
                 const coursesData = await coursesResponse.json();
                 
                 if (coursesData.success && coursesData.courses) {
@@ -337,7 +340,9 @@ export default function VideoUpload() {
                 }
 
                 // Fetch lessons
-                const lessonsResponse = await fetch("/api/admin/lessons");
+                const lessonsResponse = await fetch("/api/admin/lessons", {
+                    headers: { ...getAdminHeaders() },
+                });
                 const lessonsData = await lessonsResponse.json();
                 
                 if (lessonsData.success && lessonsData.lessons) {

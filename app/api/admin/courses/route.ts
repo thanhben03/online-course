@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import sql from '@/lib/db'
 import { verifyAdminAuth, createAdminAuthError } from '@/lib/middleware/adminAuth'
+import { userService } from '@/lib/services/userService'
 
 // GET - Lấy danh sách tất cả courses với thống kê
 export async function GET(request: NextRequest) {
   // Kiểm tra quyền admin
-  const adminUser = await verifyAdminAuth(request)
-  if (!adminUser) {
+  try {
+    // Lấy thông tin admin từ headers
+    const adminUserId = request.headers.get('X-Admin-ID')
+    const adminEmail = request.headers.get('X-Admin-Email')
+    
+    if (!adminUserId || !adminEmail) {
+      return createAdminAuthError()
+    }
+
+    // Verify admin user
+    const adminUser = await userService.findById(parseInt(adminUserId))
+    if (!adminUser  || adminUser.role !== 'admin') {
+      return createAdminAuthError()
+    }
+  } catch (error) {
     return createAdminAuthError()
   }
   try {

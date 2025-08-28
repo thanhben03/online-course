@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Eye, Clock, User, Shield } from 'lucide-react';
+import { getAdminHeaders } from '@/lib/api'
 
 interface AdminAlert {
   id: number;
@@ -34,11 +35,15 @@ export default function SecurityAlerts() {
       setLoading(true);
       
       // Fetch unread alerts
-      const unreadResponse = await fetch('/api/admin/alerts');
+      const unreadResponse = await fetch('/api/admin/alerts', {
+        headers: { ...getAdminHeaders() },
+      });
       const unreadData = await unreadResponse.json();
       
       // Fetch all alerts
-      const allResponse = await fetch('/api/admin/alerts?all=true');
+      const allResponse = await fetch('/api/admin/alerts?all=true', {
+        headers: { ...getAdminHeaders() },
+      });
       const allData = await allResponse.json();
       
       if (unreadData.success) {
@@ -63,6 +68,7 @@ export default function SecurityAlerts() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...getAdminHeaders(),
         },
         body: JSON.stringify({ alertId }),
       });
