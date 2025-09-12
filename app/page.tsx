@@ -100,17 +100,17 @@ async function getHomepageCTA() {
             'cta_secondary_href'
         ]);
         return {
-            primaryText: map['cta_primary_text'] || 'Học phí 1.500.000 VNĐ',
-            primaryHref: map['cta_primary_href'] || '/login',
-            secondaryText: map['cta_secondary_text'] || '7 chuyên đề',
-            secondaryHref: map['cta_secondary_href'] || '/courses'
+            primaryText: map['cta_primary_text'],
+            primaryHref: map['cta_primary_href'],
+            secondaryText: map['cta_secondary_text'],
+            secondaryHref: map['cta_secondary_href']
         };
     } catch {
         return {
-            primaryText: 'Học phí 1.500.000 VNĐ',
-            primaryHref: '/login',
-            secondaryText: '7 chuyên đề',
-            secondaryHref: '/courses'
+            primaryText: '',
+            primaryHref: '',
+            secondaryText: '',
+            secondaryHref: ''
         };
     }
 }
