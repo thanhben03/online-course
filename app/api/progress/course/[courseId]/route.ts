@@ -33,7 +33,11 @@ export async function GET(
         l.order_index,
         COALESCE(p.completed, false) as completed,
         COALESCE(p.watched_duration, 0) as watched_duration,
-        p.last_watched_at
+        p.last_watched_at,
+        CASE 
+          WHEN l.duration > 0 THEN ROUND(COALESCE(p.watched_duration, 0) * 100.0 / NULLIF(l.duration, 0))
+          ELSE 0
+        END AS watched_percentage
       FROM lessons l
       LEFT JOIN progress p ON l.id = p.lesson_id AND p.user_id = ${parseInt(userId)}
       WHERE l.course_id = ${courseId}
@@ -48,6 +52,9 @@ export async function GET(
     // Tính tổng thời gian đã xem
     const totalWatchedDuration = lessonProgress.reduce((sum, lesson) => sum + lesson.watched_duration, 0)
     const totalCourseDuration = lessonProgress.reduce((sum, lesson) => sum + lesson.duration, 0)
+    const averageWatchedPercentage = totalLessons > 0 ? Math.round(
+      lessonProgress.reduce((sum, lesson) => sum + (lesson.watched_percentage || 0), 0) / totalLessons
+    ) : 0
 
     return NextResponse.json({
       success: true,
@@ -58,7 +65,8 @@ export async function GET(
           completedLessons,
           totalLessons,
           totalWatchedDuration,
-          totalCourseDuration
+          totalCourseDuration,
+          averageWatchedPercentage
         },
         lessonProgress
       }

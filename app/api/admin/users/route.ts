@@ -47,9 +47,21 @@ export async function GET(request: NextRequest) {
 
 // POST - Tạo user mới
 export async function POST(request: NextRequest) {
-  // Kiểm tra quyền admin
-  const adminUser = await verifyAdminAuth(request)
-  if (!adminUser) {
+  try {
+    // Lấy thông tin admin từ headers
+    const adminUserId = request.headers.get('X-Admin-ID')
+    const adminEmail = request.headers.get('X-Admin-Email')
+    
+    if (!adminUserId || !adminEmail) {
+      return createAdminAuthError()
+    }
+
+    // Verify admin user
+    const adminUser = await userService.findById(parseInt(adminUserId))
+    if (!adminUser  || adminUser.role !== 'admin') {
+      return createAdminAuthError()
+    }
+  } catch (error) {
     return createAdminAuthError()
   }
   try {

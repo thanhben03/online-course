@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import './fonts.css'
 import { Toaster } from "@/components/ui/toaster"
+import SiteRulesProvider from "@/components/SiteRulesProvider"
 
 export const metadata: Metadata = {
   title: 'Nền tảng học tập trực tuyến',
@@ -28,7 +29,9 @@ export default function RootLayout({
         </style>
       </head>
       <body>
-        {children}
+        <SiteRulesProvider>
+          {children}
+        </SiteRulesProvider>
         <Toaster />
       </body>
     </html>

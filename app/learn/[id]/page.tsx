@@ -218,6 +218,10 @@ export default function LearnPage() {
   // Handle video progress updates
   const handleVideoProgressUpdate = (watchedDuration: number, totalDuration: number, percentageWatched: number) => {
     setVideoProgress({ watchedDuration, totalDuration, percentageWatched })
+    // Cứ mỗi 10 giây xem, đồng bộ lại tiến trình từ server để cập nhật UI
+    if (userInfo?.id && watchedDuration > 0 && watchedDuration % 10 === 0) {
+      fetchCourseProgress(userInfo.id)
+    }
   }
 
   // Mark lesson as completed with validation
@@ -468,6 +472,11 @@ export default function LearnPage() {
   const completedLessons = courseProgress?.progress?.completedLessons || 0
   const totalLessons = courseProgress?.progress?.totalLessons || lessons.length
   const progressPercentage = courseProgress?.progress?.percentage || 0
+  const currentLessonPercent = currentLesson
+    ? (videoProgress.totalDuration > 0
+        ? videoProgress.percentageWatched
+        : (lessonProgress[currentLesson.id]?.watched_percentage || 0))
+    : 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -489,8 +498,9 @@ export default function LearnPage() {
         }`}>
           <div className="p-4 border-b">
             <h2 className="font-semibold text-gray-900 mb-2">Nội dung khóa học</h2>
-            <Progress value={progressPercentage} className="h-2" />
-            <p className="text-sm text-gray-600 mt-2">{completedLessons}/{totalLessons} bài đã hoàn thành ({progressPercentage}%)</p>
+            <p className="text-sm text-gray-700 mb-1">Bài hiện tại: {currentLessonPercent}%</p>
+            <Progress value={currentLessonPercent} className="h-2 mb-2" />
+            <p className="text-sm text-gray-600">{completedLessons}/{totalLessons} bài đã hoàn thành ({progressPercentage}%)</p>
           </div>
 
           <ScrollArea className="h-[calc(100vh-8rem)]">
@@ -518,7 +528,12 @@ export default function LearnPage() {
                             <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
                           )}
                           <div className="flex-1 text-left">
-                            <div className="font-medium text-sm">{lesson.title}</div>
+                            <div className="font-medium text-sm flex items-center justify-between">
+                              <span>{lesson.title}</span>
+                              {typeof lessonProgress[lesson.id]?.watched_percentage === 'number' && (
+                                <span className="text-xs text-gray-500 ml-2">{lessonProgress[lesson.id].watched_percentage}%</span>
+                              )}
+                            </div>
                             <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
                           </div>
                           <Button

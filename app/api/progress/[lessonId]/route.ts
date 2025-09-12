@@ -22,13 +22,23 @@ export async function GET(
       SELECT 
         p.*,
         l.duration,
-        l.title as lesson_title
+        l.title as lesson_title,
+        CASE 
+          WHEN l.duration > 0 THEN ROUND(COALESCE(p.watched_duration, 0) * 100.0 / NULLIF(l.duration, 0))
+          ELSE 0
+        END AS watched_percentage
       FROM progress p
       JOIN lessons l ON p.lesson_id = l.id
       WHERE p.lesson_id = ${lessonId} AND p.user_id = ${parseInt(userId)}
     `
 
     if (progress.length === 0) {
+      // Also fetch duration to compute percentage
+      const lesson = await sql`
+        SELECT duration FROM lessons WHERE id = ${lessonId}
+      `
+      const duration = lesson.length > 0 ? lesson[0].duration : 0
+      const watched_percentage = duration > 0 ? 0 : 0
       return NextResponse.json({
         success: true,
         progress: {
@@ -36,7 +46,9 @@ export async function GET(
           user_id: parseInt(userId),
           completed: false,
           watched_duration: 0,
-          last_watched_at: null
+          last_watched_at: null,
+          duration,
+          watched_percentage
         }
       })
     }
@@ -160,7 +172,11 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: completionStatus ? 'Hoàn thành bài học thành công' : 'Cập nhật tiến trình thành công',
-      progress: progress[0],
+      progress: {
+        ...progress[0],
+        duration: lessonDuration,
+        watched_percentage: lessonDuration > 0 ? Math.round((currentWatchedDuration / lessonDuration) * 100) : 0
+      },
       canComplete,
       watchedPercentage: lessonDuration > 0 ? Math.round((currentWatchedDuration / lessonDuration) * 100) : 0
     })

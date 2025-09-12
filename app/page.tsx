@@ -10,6 +10,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import TestimonialsSlider from "@/components/TestimonialsSlider";
 import {
     BookOpen,
     Clock,
@@ -30,10 +31,13 @@ import {
 } from "lucide-react";
 import Header from "@/components/header";
 import { courseService } from "@/lib/services/courseService";
+import { instructorService } from "@/lib/services/instructorService";
 import { randomInt } from "node:crypto";
 import { formatDuration, formatPrice } from "@/lib/utils";
+import { siteSettingsService } from "@/lib/services/siteSettingsService";
 
-const instructors = [
+// Dữ liệu mặc định cho instructors (fallback)
+const defaultInstructors = [
     {
         id: 1,
         name: "Nguyễn Hoàng Duy",
@@ -74,53 +78,87 @@ const features = [
     },
 ];
 
-const testimonials = [
-    {
-        id: 1,
-        name: "Nguyễn Thị Tuyết Nhi",
-        role: "Học viên Olympic Toán",
-        avatar: "/placeholder-user.jpg",
-        content:
-            "Cảm ơn anh ạ, thực sự tự đọc giáo trình em chả hiểu gì luôn. Lần đầu tiên, em thấy có kênh Việt Nam miêu tả trực quan các định nghĩa toán học như thế này. Ngày trước em phải tự mò qua các kênh nước ngoài xem, kênh rất hay nên anh tiếp tục làm video nhé.",
-        rating: 5,
-    },
-    {
-        id: 2,
-        name: "Trần Văn Sơn",
-        role: "Học viên Olympic Toán",
-        avatar: "/placeholder-user.jpg",
-        content:
-            "Em 2k7 chuẩn bị lên Đại học chưa biết cái gì nhưng mà xem qua list video 1 năm trước của anh vẫn thấy hay mặc dù xem 2 đến 3 lần em mới hiểu. Em nghĩ anh đã ở ẩn nhưng giờ rất vui khi thấy sự comeback này ạ. Chúc anh nhiều may mắn và thành công.",
-        rating: 5,
-    },
-    {
-        id: 3,
-        name: "Lê Thị Hồng Nhung",
-        role: "Học viên Olympic Toán",
-        avatar: "/placeholder-user.jpg",
-        content:
-            "Thật sự thì e rất cảm ơn video của a rất nhiều ấy nhờ vid của a mà e có đc nhưng kiến thức nền tảng ấy ạ bản thân e trong đt của trường mà nhờ kt của a truyền đạt mà e đã hơn hầu hết mn về phần dãy ấy ạ, mà nó lại còn miễn phí chứ học mấy thầy nỗi tiếng đắt chetme:)),clip còn chất lượng dễ hiểu nắm toàn bộ kt sơ khai và các công cụ hướng tiếp cận cho các bài toán nữa,hy vọng a làm thêm vài clip nói về công cụ và hướng tiếp cận 1 bài dãy vd: bất  đẳng thức tích phân, khai triển taylor-maclaurrin,các bổ đề giới hạn,đl lagrange,... hy vọng a làm ạ e cảm ơn a và chúc a sẽ thành công trên con đường giảng dạy",
-        rating: 4,
-    },
-];
+async function getHomepageTestimonials() {
+    try {
+        const map = await siteSettingsService.getByKeys(['homepage_testimonials']);
+        const raw = map['homepage_testimonials'];
+        if (!raw) return [] as any[];
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        return [] as any[];
+    } catch {
+        return [] as any[];
+    }
+}
 
-const stats = [
-    {
-        number: "2,000+",
-        label: "Subscribers",
-        icon: <Users className="h-6 w-6" />,
-    },
-    { number: "7", label: "Chuyên đề", icon: <BookOpen className="h-6 w-6" /> },
-    {
-        number: "24/7",
-        label: "Hỗ trợ",
-        icon: <MessageCircle className="h-6 w-6" />,
-    },
-];
+async function getHomepageCTA() {
+    try {
+        const map = await siteSettingsService.getByKeys([
+            'cta_primary_text',
+            'cta_primary_href',
+            'cta_secondary_text',
+            'cta_secondary_href'
+        ]);
+        return {
+            primaryText: map['cta_primary_text'] || 'Học phí 1.500.000 VNĐ',
+            primaryHref: map['cta_primary_href'] || '/login',
+            secondaryText: map['cta_secondary_text'] || '7 chuyên đề',
+            secondaryHref: map['cta_secondary_href'] || '/courses'
+        };
+    } catch {
+        return {
+            primaryText: 'Học phí 1.500.000 VNĐ',
+            primaryHref: '/login',
+            secondaryText: '7 chuyên đề',
+            secondaryHref: '/courses'
+        };
+    }
+}
+
+async function getHomepageStats() {
+    const keys = [
+        'stats_subscribers_number',
+        'stats_subscribers_label',
+        'stats_topics_number',
+        'stats_topics_label',
+        'stats_support_number',
+        'stats_support_label'
+    ];
+    try {
+        const settings = await siteSettingsService.getByKeys(keys);
+        return [
+            {
+                number: settings['stats_subscribers_number'] || '2,000+',
+                label: settings['stats_subscribers_label'] || 'Subscribers',
+                icon: <Users className="h-6 w-6" />,
+            },
+            {
+                number: settings['stats_topics_number'] || '7',
+                label: settings['stats_topics_label'] || 'Chuyên đề',
+                icon: <BookOpen className="h-6 w-6" />,
+            },
+            {
+                number: settings['stats_support_number'] || '24/7',
+                label: settings['stats_support_label'] || 'Hỗ trợ',
+                icon: <MessageCircle className="h-6 w-6" />,
+            },
+        ];
+    } catch {
+        return [
+            { number: '2,000+', label: 'Subscribers', icon: <Users className="h-6 w-6" /> },
+            { number: '7', label: 'Chuyên đề', icon: <BookOpen className="h-6 w-6" /> },
+            { number: '24/7', label: 'Hỗ trợ', icon: <MessageCircle className="h-6 w-6" /> },
+        ];
+    }
+}
 
 export default async function HomePage() {
     const courses = await courseService.getAllCourses();
+    const instructors = await instructorService.getAllActive();
+    const stats = await getHomepageStats();
+    const testimonials = await getHomepageTestimonials();
 
+    const cta = await getHomepageCTA();
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
             {/* Header */}
@@ -365,63 +403,124 @@ export default async function HomePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-1 gap-8 max-w-5xl mx-auto">
-                        {instructors.map((instructor) => (
-                            <Card
-                                key={instructor.id}
-                                className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow"
-                            >
-                                <CardContent className="p-6">
-                                    <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden">
-                                        <Image
-                                            src={instructor.avatar}
-                                            alt={instructor.name}
-                                            width={80}
-                                            height={80}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                                        {instructor.name}
-                                    </h3>
-                                    <p className="text-sm text-blue-600 mb-1">
-                                        {instructor.title}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mb-3">
-                                        {instructor.company}
-                                    </p>
+                        {instructors.length > 0 ? (
+                            instructors.map((instructor) => (
+                                <Card
+                                    key={instructor.id}
+                                    className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow"
+                                >
+                                    <CardContent className="p-6">
+                                        <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden">
+                                            <Image
+                                                src={instructor.avatar_url}
+                                                alt={instructor.name}
+                                                width={80}
+                                                height={80}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                                            {instructor.name}
+                                        </h3>
+                                        <p className="text-sm text-blue-600 mb-1">
+                                            {instructor.title}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mb-3">
+                                            {instructor.company}
+                                        </p>
 
-                                    <div className="flex items-center justify-center gap-1 mb-3">
-                                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                                        <span className="text-sm font-medium">
-                                            {instructor.rating}
-                                        </span>
-                                    </div>
+                                        <div className="flex items-center justify-center gap-1 mb-3">
+                                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                                            <span className="text-sm font-medium">
+                                                {instructor.rating}
+                                            </span>
+                                        </div>
 
-                                    <div className="flex justify-center gap-4 text-xs text-gray-500 mb-4">
-                                        <span>
-                                            {instructor.courses} khóa học
-                                        </span>
-                                        <span>
-                                            {instructor.students} bài giảng
-                                        </span>
-                                    </div>
+                                        <div className="flex justify-center gap-4 text-xs text-gray-500 mb-4">
+                                            <span>
+                                                {instructor.courses_count} khóa học
+                                            </span>
+                                            <span>
+                                                {instructor.lessons_count} bài giảng
+                                            </span>
+                                        </div>
 
-                                    <div className="flex flex-wrap justify-center gap-1">
-                                        {instructor.expertise.map(
-                                            (skill, index) => (
-                                                <Badge
-                                                    key={index}
-                                                    variant="secondary"
-                                                    className="text-xs"
-                                                >
-                                                    {skill}
-                                                </Badge>
-                                            )
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+                                        <div className="flex flex-wrap justify-center gap-1">
+                                            {instructor.expertise.map(
+                                                (skill, index) => (
+                                                    <Badge
+                                                        key={index}
+                                                        variant="secondary"
+                                                        className="text-xs"
+                                                    >
+                                                        {skill}
+                                                    </Badge>
+                                                )
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        ) : (
+                            // Fallback nếu không có dữ liệu từ database
+                            defaultInstructors.map((instructor: any) => (
+                                <Card
+                                    key={instructor.id}
+                                    className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow"
+                                >
+                                    <CardContent className="p-6">
+                                        <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden">
+                                            <Image
+                                                src={instructor.avatar}
+                                                alt={instructor.name}
+                                                width={80}
+                                                height={80}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                                            {instructor.name}
+                                        </h3>
+                                        <p className="text-sm text-blue-600 mb-1">
+                                            {instructor.title}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mb-3">
+                                            {instructor.company}
+                                        </p>
+
+                                        <div className="flex items-center justify-center gap-1 mb-3">
+                                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                                            <span className="text-sm font-medium">
+                                                {instructor.rating}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-center gap-4 text-xs text-gray-500 mb-4">
+                                            <span>
+                                                {instructor.courses} khóa học
+                                            </span>
+                                            <span>
+                                                {instructor.students} bài giảng
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-wrap justify-center gap-1">
+                                            {instructor.expertise.map(
+                                                (skill: any, index: any) => (
+                                                    <Badge
+                                                        key={index}
+                                                        variant="secondary"
+                                                        className="text-xs"
+                                                    >
+                                                        {skill}
+                                                    </Badge>
+                                                )
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
                     </div>
                 </div>
             </section>
@@ -439,51 +538,7 @@ export default async function HomePage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                        {testimonials.map((testimonial) => (
-                            <Card
-                                key={testimonial.id}
-                                className="border-0 shadow-lg"
-                            >
-                                <CardContent className="p-6">
-                                    <div className="flex items-center gap-1 mb-4">
-                                        {[...Array(testimonial.rating)].map(
-                                            (_, i) => (
-                                                <Star
-                                                    key={i}
-                                                    className="h-4 w-4 text-yellow-500 fill-current"
-                                                />
-                                            )
-                                        )}
-                                    </div>
-
-                                    <p className="text-gray-600 mb-4 italic">
-                                        "{testimonial.content}"
-                                    </p>
-
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full overflow-hidden">
-                                            <Image
-                                                src={testimonial.avatar}
-                                                alt={testimonial.name}
-                                                width={40}
-                                                height={40}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-gray-900">
-                                                {testimonial.name}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                                {testimonial.role}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                    <TestimonialsSlider testimonials={testimonials as any} />
                 </div>
             </section>
 
@@ -503,21 +558,21 @@ export default async function HomePage() {
                             </div>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Link href="/login">
+                            <Link href={cta.primaryHref}>
                                 <Button
                                     size="lg"
                                     className="bg-white text-black hover:bg-gray-100 px-8 py-3"
                                 >
-                                    Học phí 1.500.000 VNĐ
+                                    {cta.primaryText}
                                 </Button>
                             </Link>
-                            <Link href="/courses">
+                            <Link href={cta.secondaryHref}>
                                 <Button
                                     variant="outline"
                                     size="lg"
                                     className="border-white text-black hover:bg-white hover:text-blue-600 px-8 py-3"
                                 >
-                                    7 chuyên đề
+                                    {cta.secondaryText}
                                 </Button>
                             </Link>
                         </div>
@@ -621,9 +676,9 @@ export default async function HomePage() {
                         <div>
                             <h3 className="font-semibold mb-4">Liên hệ</h3>
                             <ul className="space-y-2 text-sm text-gray-400">
-                                <li>Email: support@eduplatform.vn</li>
-                                <li>Hotline: 1900 1234</li>
-                                <li>Địa chỉ: 123 Đường ABC, Quận 1, TP.HCM</li>
+                                <li>Email: hoangduy020232003@gmail.com</li>
+                                <li>08657230069</li>
+                                <li>TP. Cần Thơ</li>
                             </ul>
                         </div>
                     </div>

@@ -27,6 +27,7 @@ export default function VideoPlayer({
   const [isTracking, setIsTracking] = useState(false)
   const progressUpdateInterval = useRef<NodeJS.Timeout | null>(null)
   const { isDevToolsOpen, warningCount, shouldSendTimeoutAlert } = useDevToolsDetector()
+  const latestSnapshotRef = useRef<{ watched: number; total: number } | null>(null)
 
   // Gửi cảnh báo đến admin khi F12 lần thứ 3 hoặc mở quá 5 giây
   const sendDevToolsAlert = async (count: number, reason: 'count' | 'timeout' = 'count') => {
@@ -72,6 +73,7 @@ export default function VideoPlayer({
 
     setWatchedDuration(watchedSeconds)
     setTotalDuration(totalSeconds)
+    latestSnapshotRef.current = { watched: watchedSeconds, total: totalSeconds }
 
     // Call parent callback
     if (onProgressUpdate) {
@@ -94,6 +96,30 @@ export default function VideoPlayer({
       } catch (error) {
         console.error('Failed to update progress:', error)
       }
+    }
+  }
+
+  // Flush progress immediately (used on beforeunload/visibility change)
+  const flushProgress = async () => {
+    try {
+      const snapshot = latestSnapshotRef.current
+      const video = videoRef.current
+      if (!lessonId || !userId) return
+      const watchedSeconds = snapshot?.watched ?? (video ? Math.floor(video.currentTime) : 0)
+      const totalSeconds = snapshot?.total ?? (video ? Math.floor(video.duration) : 0)
+      if (totalSeconds <= 0) return
+      await fetch(`/api/progress/${lessonId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          watchedDuration: watchedSeconds,
+          completed: false,
+          totalDuration: totalSeconds
+        })
+      })
+    } catch (e) {
+      // best-effort
     }
   }
 
@@ -127,6 +153,40 @@ export default function VideoPlayer({
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
+
+    // Resume from previously saved progress
+    const resumeFromSavedProgress = async () => {
+      try {
+        if (!lessonId || !userId) return
+        const res = await fetch(`/api/progress/${lessonId}?userId=${userId}`)
+        const json = await res.json()
+        if (json?.success) {
+          const savedWatched = json.progress?.watched_duration ?? 0
+          const savedDuration = json.progress?.duration ?? video.duration ?? 0
+          if (savedWatched > 0 && video.duration) {
+            // set currentTime after metadata is ready
+            video.currentTime = Math.min(savedWatched, Math.floor(video.duration))
+            setWatchedDuration(Math.floor(video.currentTime))
+            setTotalDuration(Math.floor(video.duration))
+            latestSnapshotRef.current = { watched: Math.floor(video.currentTime), total: Math.floor(video.duration) }
+            if (onProgressUpdate) {
+              const percentage = savedDuration > 0 ? Math.round((Math.floor(video.currentTime) / Math.floor(savedDuration)) * 100) : 0
+              onProgressUpdate(Math.floor(video.currentTime), Math.floor(savedDuration), percentage)
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Ensure metadata loaded then resume
+    if (video.readyState >= 1) {
+      resumeFromSavedProgress()
+    } else {
+      const onLoaded = () => resumeFromSavedProgress()
+      video.addEventListener('loadedmetadata', onLoaded, { once: true })
+    }
 
     // Handle dev tools detection
     if (isDevToolsOpen) {
@@ -232,6 +292,19 @@ export default function VideoPlayer({
     video.addEventListener('loadedmetadata', handleLoadedMetadata)
     video.addEventListener('ended', handleEnded)
 
+    // Flush progress on tab hide/close
+    const handleBeforeUnload = () => {
+      // Using navigator.sendBeacon would be ideal; fallback to sync XHR is not allowed here
+      flushProgress()
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushProgress()
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     // Cleanup
     return () => {
       stopProgressTracking()
@@ -243,6 +316,8 @@ export default function VideoPlayer({
       video.removeEventListener('pause', handlePause)
       video.removeEventListener('loadedmetadata', handleLoadedMetadata)
       video.removeEventListener('ended', handleEnded)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [isDevToolsOpen])
 

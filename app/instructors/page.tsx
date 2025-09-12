@@ -30,8 +30,10 @@ import {
     Clock,
 } from "lucide-react";
 import Header from "@/components/header";
+import { siteSettingsService } from "@/lib/services/siteSettingsService";
+import TestimonialsSlider from "@/components/TestimonialsSlider";
 
-// Dữ liệu giảng viên mẫu - sau này có thể lấy từ database
+// Dữ liệu giảng viên mẫu - fallback
 const instructor = {
     id: 1,
     name: "Nguyễn Hoàng Duy",
@@ -97,34 +99,57 @@ const instructor = {
     ]
 };
 
-const testimonials = [
-    {
-        id: 1,
-        name: "Nguyễn Thị Tuyết Nhi",
-        role: "Học viên Olympic Toán",
-        content: "Cảm ơn anh ạ, thực sự tự đọc giáo trình em chả hiểu gì luôn. Lần đầu tiên, em thấy có kênh Việt Nam miêu tả trực quan các định nghĩa toán học như thế này.",
-        rating: 5,
-        avatar: "/placeholder-user.jpg"
-    },
-    {
-        id: 2,
-        name: "Trần Văn Sơn",
-        role: "Học viên Olympic Toán",
-        content: "Em 2k7 chuẩn bị lên Đại học chưa biết cái gì nhưng mà xem qua list video 1 năm trước của anh vẫn thấy hay mặc dù xem 2 đến 3 lần em mới hiểu.",
-        rating: 5,
-        avatar: "/placeholder-user.jpg"
-    },
-    {
-        id: 3,
-        name: "Lê Thị Hồng Nhung",
-        role: "Học viên Olympic Toán",
-        content: "Thật sự thì e rất cảm ơn video của a rất nhiều ấy nhờ vid của a mà e có đc nhưng kiến thức nền tảng ấy ạ bản thân e trong đt của trường mà nhờ kt của a truyền đạt mà e đã hơn hầu hết mn về phần dãy ấy ạ.",
-        rating: 5,
-        avatar: "/placeholder-user.jpg"
-    }
-];
+async function getInstructorContent() {
+    const keys = [
+        'instructor_name','instructor_title','instructor_company','instructor_avatar',
+        'instructor_bio','instructor_students','instructor_rating','instructor_total_ratings',
+        'instructor_expertise_csv','instructor_achievements_csv','instructor_education'
+    ];
+    try {
+        const map = await siteSettingsService.getByKeys(keys);
+        const expertise = (map['instructor_expertise_csv'] || '').split(',').map(s => s.trim()).filter(Boolean);
+        const achievements = (map['instructor_achievements_csv'] || '').split(',').map(s => s.trim()).filter(Boolean);
+        const education = (() => {
+            try {
+                const raw = map['instructor_education'];
+                const arr = JSON.parse(raw || '[]');
+                return Array.isArray(arr) ? arr : [];
+            } catch { return []; }
+        })();
 
-export default function InstructorsPage() {
+        return {
+            name: map['instructor_name'] || instructor.name,
+            title: map['instructor_title'] || instructor.title,
+            company: map['instructor_company'] || instructor.company,
+            avatar: map['instructor_avatar'] || instructor.avatar,
+            bio: map['instructor_bio'] || instructor.bio,
+            students: Number(map['instructor_students'] || instructor.students),
+            rating: Number(map['instructor_rating'] || instructor.rating),
+            totalRatings: Number(map['instructor_total_ratings'] || instructor.totalRatings),
+            expertise: expertise.length ? expertise : instructor.expertise,
+            achievements: achievements.length ? achievements : instructor.achievements,
+            education: education.length ? education : instructor.education,
+        };
+    } catch {
+        return instructor;
+    }
+}
+
+async function getHomepageTestimonials() {
+    try {
+        const map = await siteSettingsService.getByKeys(['homepage_testimonials']);
+        const raw = map['homepage_testimonials'];
+        if (!raw) return [] as any[];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [] as any[];
+    }
+}
+
+export default async function InstructorsPage() {
+    const merged = await getInstructorContent();
+    const testimonials = await getHomepageTestimonials();
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
             <Header variant="default" />
@@ -141,41 +166,39 @@ export default function InstructorsPage() {
                                         <div className="text-center">
                                             <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden shadow-lg">
                                                 <Image
-                                                    src={instructor.avatar}
-                                                    alt={instructor.name}
+                                                    src={merged.avatar}
+                                                    alt={merged.name}
                                                     width={128}
                                                     height={128}
                                                     className="w-full h-full object-cover"
                                                 />
                                             </div>
                                             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                                                {instructor.name}
+                                                {merged.name}
                                             </h1>
                                             <p className="text-lg text-blue-600 mb-2">
-                                                {instructor.title}
+                                                {merged.title}
                                             </p>
                                             <p className="text-gray-600 mb-4">
-                                                {instructor.company}
+                                                {merged.company}
                                             </p>
                                             
                                             {/* Rating */}
                                             <div className="flex items-center justify-center gap-2 mb-4">
                                                 <div className="flex items-center gap-1">
                                                     <Star className="h-5 w-5 text-yellow-500 fill-current" />
-                                                    <span className="font-bold text-lg">{instructor.rating}</span>
+                                                    <span className="font-bold text-lg">{merged.rating}</span>
                                                 </div>
                                                 <span className="text-gray-500">
-                                                    ({instructor.totalRatings} đánh giá)
+                                                    ({merged.totalRatings} đánh giá)
                                                 </span>
                                             </div>
 
                                             {/* Stats Grid */}
                                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                                {instructor.stats.map((stat, index) => (
+                                                {[{ label: "Năm kinh nghiệm", value: "5" }, { label: "Subscribers", value: "2,500+" }, { label: "Khoá học", value: String(instructor.courses) }, { label: "Đánh giá", value: `${merged.rating}/5` }].map((stat, index) => (
                                                     <div key={index} className="text-center p-3 bg-gray-50 rounded-lg">
-                                                        <div className="flex items-center justify-center mb-1 text-blue-600">
-                                                            {stat.icon}
-                                                        </div>
+                                                        <div className="flex items-center justify-center mb-1 text-blue-600"></div>
                                                         <div className="font-bold text-lg text-gray-900">
                                                             {stat.value}
                                                         </div>
@@ -214,13 +237,13 @@ export default function InstructorsPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <p className="text-gray-700 leading-relaxed mb-4">
-                                            {instructor.bio}
+                                            {merged.bio}
                                         </p>
                                         
                                         <div className="mb-4">
                                             <h4 className="font-semibold text-gray-900 mb-2">Chuyên môn:</h4>
                                             <div className="flex flex-wrap gap-2">
-                                                {instructor.expertise.map((skill, index) => (
+                                                {merged.expertise.map((skill, index) => (
                                                     <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
                                                         {skill}
                                                     </Badge>
@@ -255,7 +278,7 @@ export default function InstructorsPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            {instructor.education.map((edu, index) => (
+                                            {merged.education.map((edu: any, index: number) => (
                                                 <div key={index} className="border-l-4 border-blue-600 pl-4">
                                                     <h4 className="font-semibold text-gray-900">{edu.degree}</h4>
                                                     <p className="text-gray-700">{edu.school}</p>
@@ -317,7 +340,7 @@ export default function InstructorsPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {instructor.achievements.map((achievement, index) => (
+                                            {merged.achievements.map((achievement, index) => (
                                                 <div key={index} className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
                                                     <Award className="h-4 w-4 text-yellow-600 flex-shrink-0" />
                                                     <span className="text-gray-700 text-sm">{achievement}</span>
@@ -345,39 +368,7 @@ export default function InstructorsPage() {
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {testimonials.map((testimonial) => (
-                                <Card key={testimonial.id} className="border-0 shadow-lg">
-                                    <CardContent className="p-6">
-                                        <div className="flex items-center gap-1 mb-4">
-                                            {[...Array(testimonial.rating)].map((_, i) => (
-                                                <Star key={i} className="h-4 w-4 text-yellow-500 fill-current" />
-                                            ))}
-                                        </div>
-
-                                        <p className="text-gray-600 mb-4 italic line-clamp-4">
-                                            "{testimonial.content}"
-                                        </p>
-
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full overflow-hidden">
-                                                <Image
-                                                    src={testimonial.avatar}
-                                                    alt={testimonial.name}
-                                                    width={40}
-                                                    height={40}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900">{testimonial.name}</p>
-                                                <p className="text-sm text-gray-500">{testimonial.role}</p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
+                        <TestimonialsSlider testimonials={testimonials as any} />
                     </div>
                 </div>
             </section>
@@ -390,7 +381,7 @@ export default function InstructorsPage() {
                             Sẵn sàng bắt đầu hành trình học tập?
                         </h2>
                         <p className="text-xl text-blue-100 mb-8">
-                            Tham gia cùng {instructor.students.toLocaleString()}+ học viên đã tin tưởng
+                            Tham gia cùng học viên đã tin tưởng
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Link href="/courses">
@@ -401,7 +392,7 @@ export default function InstructorsPage() {
                             <Button 
                                 variant="outline" 
                                 size="lg" 
-                                className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3"
+                                className="border-white text-blue-600 hover:bg-white hover:text-blue-600 px-8 py-3"
                             >
                                 Tư vấn miễn phí
                             </Button>

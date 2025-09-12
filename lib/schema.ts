@@ -124,6 +124,19 @@ export const createAdminAlertsTable = sql`
   );
 `;
 
+// Tạo bảng site_settings (để lưu cài đặt chung của trang web)
+export const createSiteSettingsTable = sql`
+  CREATE TABLE IF NOT EXISTS site_settings (
+    id SERIAL PRIMARY KEY,
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value TEXT,
+    setting_type VARCHAR(50) DEFAULT 'text',
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`;
+
 // Tạo index cho bảng admin_alerts
 export const createAdminAlertsCreatedAtIndex = sql`
   CREATE INDEX IF NOT EXISTS idx_admin_alerts_created_at ON admin_alerts(created_at);
@@ -150,6 +163,7 @@ export const initializeDatabase = async () => {
     await createLoginSessionsUserIdIndex;
     await createLoginSessionsLoginAtIndex;
     await createAdminAlertsTable;
+    await createSiteSettingsTable;
     await createAdminAlertsCreatedAtIndex;
     await createAdminAlertsIsReadIndex;
     await createAdminAlertsUserIdIndex;
@@ -158,4 +172,31 @@ export const initializeDatabase = async () => {
     console.error('Error initializing database:', error);
     throw error;
   }
-}; 
+};
+
+// Tạo bảng instructors (để quản lý thông tin giảng viên trên trang chủ)
+export const createInstructorsTable = sql`
+  CREATE TABLE IF NOT EXISTS instructors (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    company VARCHAR(255) NOT NULL,
+    avatar_url VARCHAR(500) DEFAULT '/placeholder-user.jpg',
+    courses_count INTEGER DEFAULT 0,
+    lessons_count INTEGER DEFAULT 0,
+    rating DECIMAL(3,2) DEFAULT 5.00,
+    expertise TEXT[], -- Array of skills
+    order_index INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`;
+
+// Thêm dữ liệu mẫu cho instructors
+export const seedInstructorsData = sql`
+  INSERT INTO instructors (name, title, company, avatar_url, courses_count, lessons_count, rating, expertise, order_index) 
+  VALUES 
+    ('Nguyễn Hoàng Duy', 'Admin/Founder', 'Olympic Toán Giải Tích', '/placeholder-user.jpg', 7, 80, 4.8, ARRAY['VJIMC', 'Olympic Toán Giải Tích', 'Manim'], 1)
+  ON CONFLICT (id) DO NOTHING;
+`; 

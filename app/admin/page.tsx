@@ -62,8 +62,16 @@ const SecurityAlerts = dynamic(() => import('./components/SecurityAlerts'), {
   ssr: false,
   loading: LoadingSpinner
 })
+const SiteSettings = dynamic(() => import('./components/SiteSettings'), { 
+  ssr: false,
+  loading: LoadingSpinner
+})
+const InstructorManagement = dynamic(() => import('./components/InstructorManagement'), { 
+  ssr: false,
+  loading: LoadingSpinner
+})
 
-type ActiveModule = 'dashboard' | 'courses' | 'upload' | 'lessons' | 'users' | 'security'
+type ActiveModule = 'dashboard' | 'courses' | 'upload' | 'lessons' | 'users' | 'instructors' | 'security' | 'settings'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -230,10 +238,22 @@ export default function AdminPage() {
       description: 'Thêm/xóa/sửa tài khoản học viên'
     },
     {
+      id: 'instructors' as ActiveModule,
+      title: 'Quản lý giảng viên',
+      icon: Users,
+      description: 'Quản lý thông tin giảng viên trên trang chủ'
+    },
+    {
       id: 'security' as ActiveModule,
       title: 'Cảnh báo bảo mật',
       icon: Shield,
       description: 'Theo dõi hoạt động đăng nhập bất thường'
+    },
+    {
+      id: 'settings' as ActiveModule,
+      title: 'Cài đặt trang web',
+      icon: Settings,
+      description: 'Quản lý nội quy và cài đặt chung'
     }
   ]
 
@@ -247,8 +267,12 @@ export default function AdminPage() {
         return <LessonManagement />
       case 'users':
         return <UserManagement />
+      case 'instructors':
+        return <InstructorManagement />
       case 'security':
         return <SecurityAlerts />
+      case 'settings':
+        return <SiteSettings />
       default:
         return (
           <div className="space-y-6">

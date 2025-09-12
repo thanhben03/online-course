@@ -46,6 +46,15 @@ export default function CoursePage() {
   const params = useParams()
   const router = useRouter()
   const courseId = Number.parseInt(params.id as string)
+  const [redirected, setRedirected] = useState(false)
+  // Redirect directly to learn page for this course
+  useEffect(() => {
+    if (!Number.isNaN(courseId)) {
+      router.replace(`/learn/${courseId}`)
+      setRedirected(true)
+    }
+  }, [router, courseId])
+
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userInfo, setUserInfo] = useState<any>(null)
   const [course, setCourse] = useState<Course | null>(null)
@@ -146,6 +155,18 @@ export default function CoursePage() {
       return `${hours}h ${mins}m`
     }
     return `${mins}m`
+  }
+
+  // If redirecting, show minimal feedback while navigation happens
+  if (redirected) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Đang chuyển hướng tới trang học...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!isLoggedIn) {
