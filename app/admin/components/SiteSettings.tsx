@@ -78,6 +78,7 @@ export default function SiteSettings() {
     const [insStudents, setInsStudents] = useState("");
     const [insRating, setInsRating] = useState("");
     const [insTotalRatings, setInsTotalRatings] = useState("");
+    const [insCourses, setInsCourses] = useState("");
     const [insBio, setInsBio] = useState("");
     const [insExpertiseCsv, setInsExpertiseCsv] = useState("");
     const [insAchievementsCsv, setInsAchievementsCsv] = useState("");
@@ -168,6 +169,9 @@ export default function SiteSettings() {
                         case 'instructor_students':
                             setInsStudents(setting.setting_value || '');
                             break;
+                        case 'instructor_courses':
+                            setInsCourses(setting.setting_value || '');
+                            break;
                         case 'instructor_rating':
                             setInsRating(setting.setting_value || '');
                             break;
@@ -256,6 +260,7 @@ export default function SiteSettings() {
             'instructor_company': 'Đơn vị',
             'instructor_avatar': 'Ảnh đại diện',
             'instructor_students': 'Số học viên',
+            'instructor_courses': 'Số khóa học',
             'instructor_rating': 'Điểm rating',
             'instructor_total_ratings': 'Tổng số đánh giá',
             'instructor_bio': 'Giới thiệu/Bio',
@@ -292,6 +297,7 @@ export default function SiteSettings() {
             { key: 'instructor_company', value: insCompany },
             { key: 'instructor_avatar', value: insAvatar },
             { key: 'instructor_students', value: insStudents },
+            { key: 'instructor_courses', value: insCourses },
             { key: 'instructor_rating', value: insRating },
             { key: 'instructor_total_ratings', value: insTotalRatings },
             { key: 'instructor_bio', value: insBio },
@@ -579,6 +585,14 @@ Bằng việc đồng ý với nội quy này, bạn cam kết tuân thủ các 
                                         type="number"
                                         value={insStudents}
                                         onChange={(e) => setInsStudents(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Số khóa học</Label>
+                                    <Input
+                                        type="number"
+                                        value={insCourses}
+                                        onChange={(e) => setInsCourses(e.target.value)}
                                     />
                                 </div>
                                 <div className="space-y-2">

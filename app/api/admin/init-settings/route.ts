@@ -175,6 +175,7 @@ Bằng việc đồng ý với nội quy này, bạn cam kết tuân thủ các 
       { key: 'instructor_students', value: '2500', type: 'text', description: 'Số học viên' },
       { key: 'instructor_rating', value: '4.9', type: 'text', description: 'Điểm rating' },
       { key: 'instructor_total_ratings', value: '450', type: 'text', description: 'Tổng số đánh giá' },
+      { key: 'instructor_courses', value: '7', type: 'text', description: 'Số khóa học' },
       { key: 'instructor_expertise_csv', value: 'Olympic Toán,Giải Tích,Toán THPT,Manim,VJIMC', type: 'text', description: 'Chuyên môn (CSV)' },
       { key: 'instructor_achievements_csv', value: 'Học bổng du học Châu Âu,Top 1 (BXH ĐHCT) VJIMC 2025,Giải nhất NCKH (ĐHCT) Ứng dụng Manim trong dạy học Toán,300+ member', type: 'text', description: 'Thành tích (CSV)' }
       ,
