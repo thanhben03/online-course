@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "app/api/upload-proxy/route.ts": {
+      "maxDuration": 900
+    },
+    "app/api/upload-longvan/route.ts": {
+      "maxDuration": 900
+    },
+    "app/api/admin/uploads/route.ts": {
+      "maxDuration": 900
+    }
+  },
+  "regions": ["hnd1"],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
+}
