@@ -4,7 +4,7 @@
       "maxDuration": 300
     },
     "app/api/upload-stream/route.ts": {
-      "maxDuration": 900
+      "maxDuration": 300
     },
     "app/api/upload-longvan/route.ts": {
       "maxDuration": 300
