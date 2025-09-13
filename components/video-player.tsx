@@ -24,7 +24,7 @@ export default function VideoPlayer({
   const [showDevToolsWarning, setShowDevToolsWarning] = useState(false)
   const [watchedDuration, setWatchedDuration] = useState(0)
   const [totalDuration, setTotalDuration] = useState(0)
-  const [isTracking, setIsTracking] = useState(false)
+  const [isTracking, setIsTracking] = useState(false) 
   const progressUpdateInterval = useRef<NodeJS.Timeout | null>(null)
   const { isDevToolsOpen, warningCount, shouldSendTimeoutAlert } = useDevToolsDetector()
   const latestSnapshotRef = useRef<{ watched: number; total: number } | null>(null)
