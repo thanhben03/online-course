@@ -19,7 +19,7 @@ export const generateUploadUrl = async (fileName: string, contentType: string, f
   const key = `${folder}/${timestamp}-${randomString}.${extension}`
 
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_S3_BUCKET || '19428351-course',
+    Bucket: process.env.AWS_S3_BUCKET || '19430110-courses',
     Key: key,
     ContentType: contentType,
     ACL: 'public-read',
@@ -37,7 +37,7 @@ export const generateUploadUrl = async (fileName: string, contentType: string, f
 
 export const uploadToS3LongVan = async (file: Buffer, key: string, contentType: string) => {
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_S3_BUCKET || '19428351-course',
+    Bucket: process.env.AWS_S3_BUCKET || '19430110-courses',
     Key: key,
     Body: file,
     ContentType: contentType,
@@ -49,7 +49,7 @@ export const uploadToS3LongVan = async (file: Buffer, key: string, contentType: 
 
 export const deleteFromS3LongVan = async (key: string) => {
   const command = new DeleteObjectCommand({
-    Bucket: process.env.AWS_S3_BUCKET || '19428351-course',
+    Bucket: process.env.AWS_S3_BUCKET || '19430110-courses',
     Key: key,
   })
 
@@ -58,7 +58,7 @@ export const deleteFromS3LongVan = async (key: string) => {
 
 export const getSignedDownloadUrl = async (key: string, expiresIn = 3600) => {
   const command = new GetObjectCommand({
-    Bucket: process.env.AWS_S3_BUCKET || '19428351-course',
+    Bucket: process.env.AWS_S3_BUCKET || '19430110-courses',
     Key: key,
   })
 
