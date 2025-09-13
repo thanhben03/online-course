@@ -150,9 +150,16 @@ async function getHomepageTestimonials() {
     }
 }
 
+// Dynamic rendering is now handled globally in layout.tsx
+
 export default async function InstructorsPage() {
     const merged = await getInstructorContent();
     const testimonials = await getHomepageTestimonials();
+    
+    // Debug: Log timestamp to check if page is being re-rendered
+    console.log('🕐 Instructors page rendered at:', new Date().toISOString());
+    console.log('📊 Instructor data:', merged);
+    
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
             <Header variant="default" />

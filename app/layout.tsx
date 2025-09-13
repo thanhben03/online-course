@@ -4,6 +4,10 @@ import './fonts.css'
 import { Toaster } from "@/components/ui/toaster"
 import SiteRulesProvider from "@/components/SiteRulesProvider"
 
+// Force dynamic rendering for all pages
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export const metadata: Metadata = {
   title: 'Nền tảng học tập trực tuyến',
   description: 'Nền tảng học tập trực tuyến',

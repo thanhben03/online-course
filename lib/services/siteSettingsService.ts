@@ -24,7 +24,8 @@ export class SiteSettingsService {
 
   async getByKeys(keys: string[]): Promise<Record<string, string>> {
     if (!keys || keys.length === 0) return {};
-    const rows = await sql`SELECT * FROM site_settings WHERE setting_key = ANY(${keys})`;
+    // Add cache-busting to prevent stale data
+    const rows = await sql`SELECT * FROM site_settings WHERE setting_key = ANY(${keys}) ORDER BY updated_at DESC`;
     const map: Record<string, string> = {};
     for (const row of (rows as unknown as SiteSettingRecord[])) {
       map[row.setting_key] = row.setting_value ?? "";
