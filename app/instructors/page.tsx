@@ -118,14 +118,14 @@ async function getInstructorContent() {
         })();
 
         return {
-            name: map['instructor_name'] || instructor.name,
-            title: map['instructor_title'] || instructor.title,
-            company: map['instructor_company'] || instructor.company,
-            avatar: map['instructor_avatar'] || instructor.avatar,
-            bio: map['instructor_bio'] || instructor.bio,
-            students: Number(map['instructor_students'] || instructor.students),
-            rating: Number(map['instructor_rating'] || instructor.rating),
-            totalRatings: Number(map['instructor_total_ratings'] || instructor.totalRatings),
+            name: map['instructor_name'],
+            title: map['instructor_title'],
+            company: map['instructor_company'],
+            avatar: map['instructor_avatar'],
+            bio: map['instructor_bio'],
+            students: Number(map['instructor_students']),
+            rating: Number(map['instructor_rating']),
+            totalRatings: Number(map['instructor_total_ratings']),
             expertise: expertise.length ? expertise : instructor.expertise,
             achievements: achievements.length ? achievements : instructor.achievements,
             education: education.length ? education : instructor.education,
