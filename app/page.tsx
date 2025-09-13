@@ -363,7 +363,7 @@ export default async function HomePage() {
                                 </CardContent>
                                 <CardFooter className="p-4 pt-0">
                                     <Link
-                                        href={`/course/${course.id}`}
+                                        href={`/learn/${course.id}`}
                                         className="w-full"
                                     >
                                         <Button className="w-full bg-blue-600 hover:bg-blue-700">
