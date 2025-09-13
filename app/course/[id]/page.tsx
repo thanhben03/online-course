@@ -107,7 +107,7 @@ export default function CoursePage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching data:', error)
+      console.error('Error fetching data 123:', error)
     } finally {
       setLoading(false)
     }
