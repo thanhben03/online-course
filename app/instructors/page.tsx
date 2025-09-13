@@ -34,76 +34,76 @@ import { siteSettingsService } from "@/lib/services/siteSettingsService";
 import TestimonialsSlider from "@/components/TestimonialsSlider";
 
 // Dữ liệu giảng viên mẫu - fallback
-const instructor = {
-    id: 1,
-    name: "Nguyễn Hoàng Duy",
-    title: "Admin/Founder",
-    bio: "Giảng viên Olympic Toán với 5 năm kinh nghiệm giảng dạy và nghiên cứu. Chuyên gia về Giải tích, Đại số và Hình học. Từng đạt giải cao tại các kỳ thi Olympic Toán quốc tế và hiện đang phụ trách nhiều chuyên đề toán học nâng cao.",
-    company: "Olympic Toán Giải Tích",
-    avatar: "/placeholder-user.jpg",
-    courses: 7,
-    students: 2500,
-    rating: 4.9,
-    totalRatings: 450,
-    expertise: ["Olympic Toán", "Giải Tích", "Toán THPT", "Manim", "VJIMC"],
-    education: [
-        {
-            degree: "Thạc sĩ Toán ứng dụng",
-            school: "Đại học Cần Thơ",
-            year: "2025-2027"
-        },
-        {
-            degree: "Cử nhân Sư phạm Toán học - K47",
-            school: "Trường Sư phạm - Đại học Cần Thơ",
-            year: "2021-2025"
-        },
-        {
-            degree: "Du học - thực tập",
-            school: "Đại học Ostra - Cộng Hoà Séc",
-            year: "8/2024 - 7/2025"
-        }
-    ],
-    achievements: [
-        "Học bổng du học Châu Âu",
-        "Top 1 (BXH ĐHCT) VJIMC 2025",
-        "Giải nhất NCKH (ĐHCT) Ứng dụng Manim trong dạy học Toán",
-        "300+ member"
-    ],
-    experience: [
-        {
-            position: "Founder & Giảng viên chính",
-            company: "Olympic Toán Giải Tích",
-            period: "2023 - Hiện tại",
-            description: "Xây dựng và phát triển nền tảng học tập Olympic Toán trực tuyến, thiết kế chương trình học và giảng dạy trực tiếp."
-        },
-        {
-            position: "Giáo viên Toán",
-            company: "Hệ thống giáo dục Akadon Education",
-            period: "2021 - Hiện tại",
-            description: ""
-        }
-    ],
-    contact: {
-        email: "duy@olympicmath.vn",
-        phone: "+84 987 654 321",
-        website: "https://olympicmath.vn",
-        linkedin: "https://linkedin.com/in/nguyenhoangduy",
-        youtube: "https://youtube.com/@olympicmath"
-    },
-    teachingPhilosophy: "Toán học không chỉ là những con số và công thức, mà là cách tư duy logic và giải quyết vấn đề. Tôi tin rằng mọi học sinh đều có thể làm chủ toán học nếu được hướng dẫn đúng cách và có động lực phù hợp.",
-    stats: [
-        { label: "Năm kinh nghiệm", value: "5", icon: <Calendar className="h-5 w-5" /> },
-        { label: "Subscribers", value: "2,500+", icon: <Users className="h-5 w-5" /> },
-        { label: "Khoá học", value: "7", icon: <BookOpen className="h-5 w-5" /> },
-        { label: "Đánh giá", value: "4.9/5", icon: <Star className="h-5 w-5" /> }
-    ]
-};
+// const instructor = {
+//     id: 1,
+//     name: "Nguyễn Hoàng Duy",
+//     title: "Admin/Founder",
+//     bio: "Giảng viên Olympic Toán với 5 năm kinh nghiệm giảng dạy và nghiên cứu. Chuyên gia về Giải tích, Đại số và Hình học. Từng đạt giải cao tại các kỳ thi Olympic Toán quốc tế và hiện đang phụ trách nhiều chuyên đề toán học nâng cao.",
+//     company: "Olympic Toán Giải Tích",
+//     avatar: "/placeholder-user.jpg",
+//     courses: 7,
+//     students: 2500,
+//     rating: 4.9,
+//     totalRatings: 450,
+//     expertise: ["Olympic Toán", "Giải Tích", "Toán THPT", "Manim", "VJIMC"],
+//     education: [
+//         {
+//             degree: "Thạc sĩ Toán ứng dụng",
+//             school: "Đại học Cần Thơ",
+//             year: "2025-2027"
+//         },
+//         {
+//             degree: "Cử nhân Sư phạm Toán học - K47",
+//             school: "Trường Sư phạm - Đại học Cần Thơ",
+//             year: "2021-2025"
+//         },
+//         {
+//             degree: "Du học - thực tập",
+//             school: "Đại học Ostra - Cộng Hoà Séc",
+//             year: "8/2024 - 7/2025"
+//         }
+//     ],
+//     achievements: [
+//         "Học bổng du học Châu Âu",
+//         "Top 1 (BXH ĐHCT) VJIMC 2025",
+//         "Giải nhất NCKH (ĐHCT) Ứng dụng Manim trong dạy học Toán",
+//         "300+ member"
+//     ],
+//     experience: [
+//         {
+//             position: "Founder & Giảng viên chính",
+//             company: "Olympic Toán Giải Tích",
+//             period: "2023 - Hiện tại",
+//             description: "Xây dựng và phát triển nền tảng học tập Olympic Toán trực tuyến, thiết kế chương trình học và giảng dạy trực tiếp."
+//         },
+//         {
+//             position: "Giáo viên Toán",
+//             company: "Hệ thống giáo dục Akadon Education",
+//             period: "2021 - Hiện tại",
+//             description: ""
+//         }
+//     ],
+//     contact: {
+//         email: "duy@olympicmath.vn",
+//         phone: "+84 987 654 321",
+//         website: "https://olympicmath.vn",
+//         linkedin: "https://linkedin.com/in/nguyenhoangduy",
+//         youtube: "https://youtube.com/@olympicmath"
+//     },
+//     teachingPhilosophy: "Toán học không chỉ là những con số và công thức, mà là cách tư duy logic và giải quyết vấn đề. Tôi tin rằng mọi học sinh đều có thể làm chủ toán học nếu được hướng dẫn đúng cách và có động lực phù hợp.",
+//     stats: [
+//         { label: "Năm kinh nghiệm", value: "5", icon: <Calendar className="h-5 w-5" /> },
+//         { label: "Subscribers", value: "2,500+", icon: <Users className="h-5 w-5" /> },
+//         { label: "Khoá học", value: "7", icon: <BookOpen className="h-5 w-5" /> },
+//         { label: "Đánh giá", value: "4.9/5", icon: <Star className="h-5 w-5" /> }
+//     ]
+// };
 
 async function getInstructorContent() {
     const keys = [
         'instructor_name','instructor_title','instructor_company','instructor_avatar',
         'instructor_bio','instructor_students','instructor_rating','instructor_total_ratings',
-        'instructor_expertise_csv','instructor_achievements_csv','instructor_education'
+        'instructor_courses','instructor_expertise_csv','instructor_achievements_csv','instructor_education'
     ];
     try {
         const map = await siteSettingsService.getByKeys(keys);
@@ -126,12 +126,14 @@ async function getInstructorContent() {
             students: Number(map['instructor_students']),
             rating: Number(map['instructor_rating']),
             totalRatings: Number(map['instructor_total_ratings']),
-            expertise: expertise.length ? expertise : instructor.expertise,
-            achievements: achievements.length ? achievements : instructor.achievements,
-            education: education.length ? education : instructor.education,
+            courses: Number(map['instructor_courses']) || 0,
+            expertise: expertise.length ? expertise : [],
+            achievements: achievements.length ? achievements : [],
+            education: education.length ? education : [],
+            experience: [],
         };
     } catch {
-        return instructor;
+        return {};
     }
 }
 
@@ -166,8 +168,8 @@ export default async function InstructorsPage() {
                                         <div className="text-center">
                                             <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden shadow-lg">
                                                 <Image
-                                                    src={merged.avatar}
-                                                    alt={merged.name}
+                                                    src={merged.avatar || ''}
+                                                    alt={merged.name || ''}
                                                     width={128}
                                                     height={128}
                                                     className="w-full h-full object-cover"
@@ -196,7 +198,7 @@ export default async function InstructorsPage() {
 
                                             {/* Stats Grid */}
                                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                                {[{ label: "Năm kinh nghiệm", value: "5" }, { label: "Subscribers", value: "2,500+" }, { label: "Khoá học", value: String(instructor.courses) }, { label: "Đánh giá", value: `${merged.rating}/5` }].map((stat, index) => (
+                                                {[{ label: "Năm kinh nghiệm", value: "5" }, { label: "Subscribers", value: "2,500+" }, { label: "Khoá học", value: String(merged.courses || 0) }, { label: "Đánh giá", value: `${merged.rating}/5` }].map((stat, index) => (
                                                     <div key={index} className="text-center p-3 bg-gray-50 rounded-lg">
                                                         <div className="flex items-center justify-center mb-1 text-blue-600"></div>
                                                         <div className="font-bold text-lg text-gray-900">
@@ -243,7 +245,7 @@ export default async function InstructorsPage() {
                                         <div className="mb-4">
                                             <h4 className="font-semibold text-gray-900 mb-2">Chuyên môn:</h4>
                                             <div className="flex flex-wrap gap-2">
-                                                {merged.expertise.map((skill, index) => (
+                                                {merged.expertise?.map((skill: any, index: any) => (
                                                     <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
                                                         {skill}
                                                     </Badge>
@@ -278,7 +280,7 @@ export default async function InstructorsPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            {merged.education.map((edu: any, index: number) => (
+                                            {merged.education?.map((edu: any, index: number) => (
                                                 <div key={index} className="border-l-4 border-blue-600 pl-4">
                                                     <h4 className="font-semibold text-gray-900">{edu.degree}</h4>
                                                     <p className="text-gray-700">{edu.school}</p>
@@ -299,7 +301,7 @@ export default async function InstructorsPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-6">
-                                            {instructor.experience.map((exp, index) => (
+                                            {merged.experience?.map((exp: any, index: any) => (
                                                 <div key={index} className="border-l-4 border-green-600 pl-4">
                                                     <h4 className="font-semibold text-gray-900">{exp.position}</h4>
                                                     <p className="text-blue-600 font-medium">{exp.company}</p>
@@ -340,7 +342,7 @@ export default async function InstructorsPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {merged.achievements.map((achievement, index) => (
+                                            {merged.achievements?.map((achievement, index) => (
                                                 <div key={index} className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
                                                     <Award className="h-4 w-4 text-yellow-600 flex-shrink-0" />
                                                     <span className="text-gray-700 text-sm">{achievement}</span>
