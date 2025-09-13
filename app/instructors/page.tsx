@@ -193,7 +193,7 @@ export default async function InstructorsPage() {
                                                     <span className="font-bold text-lg">{merged.rating}</span>
                                                 </div>
                                                 <span className="text-gray-500">
-                                                    ({merged.totalRatings} đánh giá)
+                                                    ({merged.totalRatings} đánh giá 23232323)
                                                 </span>
                                             </div>
 
