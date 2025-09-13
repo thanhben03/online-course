@@ -87,6 +87,10 @@ export default function VideoUpload() {
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadedMB, setUploadedMB] = useState(0);
+    const [totalMB, setTotalMB] = useState(0);
+    const [uploadSpeed, setUploadSpeed] = useState(0);
+    const [uploadStartTime, setUploadStartTime] = useState<number>(0);
     const [message, setMessage] = useState<{
         type: "success" | "error";
         text: string;
@@ -127,33 +131,77 @@ export default function VideoUpload() {
             // Upload từng file một qua API proxy (giống upload-test)
             const uploadedResults = [];
 
-            // Simulate progress như upload-test
-            const progressInterval = setInterval(() => {
-                setUploadProgress((prev) => {
-                    if (prev >= 90) {
-                        clearInterval(progressInterval);
-                        return 90;
-                    }
-                    return prev + 10;
-                });
-            }, 200);
+            // Calculate total file size for all files
+            const totalBytes = Array.from(selectedFiles).reduce((sum, file) => sum + file.size, 0);
+            setTotalMB(totalBytes / (1024 * 1024));
+            setUploadedMB(0);
+            setUploadSpeed(0);
+            setUploadStartTime(Date.now());
 
             for (const file of Array.from(selectedFiles)) {
-                // Tạo FormData để gửi file (giống upload-test)
+                console.log('Starting upload via upload-proxy (server upload) for file:', file.name);
+
+                // Tạo FormData để gửi file qua server (bypass CORS)
                 const fileFormData = new FormData();
                 fileFormData.append("file", file);
 
-                // Upload qua proxy API (giống upload-test)
-                const response = await fetch("/api/upload-proxy", {
-                    method: "POST",
-                    body: fileFormData,
+                // Sử dụng XMLHttpRequest để theo dõi tiến trình upload
+                const xhr = new XMLHttpRequest();
+
+                // Promise để handle XMLHttpRequest
+                const uploadPromise = new Promise<any>((resolve, reject) => {
+                    xhr.upload.addEventListener('progress', (event) => {
+                        if (event.lengthComputable) {
+                            const progressPercent = Math.round((event.loaded / event.total) * 100);
+                            const uploadedMegabytes = event.loaded / (1024 * 1024);
+                            const totalMegabytes = event.total / (1024 * 1024);
+                            
+                            // Tính tốc độ upload (MB/s)
+                            const currentTime = Date.now();
+                            const elapsedSeconds = (currentTime - uploadStartTime) / 1000;
+                            const currentSpeed = elapsedSeconds > 0 ? uploadedMegabytes / elapsedSeconds : 0;
+                            
+                            setUploadProgress(progressPercent);
+                            setUploadedMB(uploadedMegabytes);
+                            setUploadSpeed(currentSpeed);
+                            
+                            console.log(`🚀 ADMIN UPLOAD PROGRESS THẬT: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
+                            console.log(`📊 Bytes uploaded: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                const result = JSON.parse(xhr.responseText);
+                                resolve(result);
+                            } catch (e) {
+                                reject(new Error('Invalid response format'));
+                            }
+                        } else {
+                            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+                        }
+                    });
+
+                    xhr.addEventListener('error', () => {
+                        reject(new Error('Network error occurred'));
+                    });
+
+                    xhr.addEventListener('abort', () => {
+                        reject(new Error('Upload was aborted'));
+                    });
+
+                    xhr.open('POST', '/api/upload-proxy');
+                    xhr.send(fileFormData);
                 });
 
-                const result = await response.json();
+                const result = await uploadPromise;
 
-                if (!response.ok || !result.success) {
-                    throw new Error(result.error || "Upload failed");
+                if (!result.success) {
+                    throw new Error(result.error || 'Upload failed');
                 }
+
+                console.log('File uploaded successfully via server:', result.key);
 
                 // Lưu thông tin file vào database
                 const saveResponse = await fetch("/api/admin/uploads", {
@@ -193,7 +241,6 @@ export default function VideoUpload() {
                 setUploadedFiles((prev) => [uploadedFile, ...prev]);
             }
 
-            clearInterval(progressInterval);
             setUploadProgress(100);
 
             setMessage({
@@ -217,6 +264,10 @@ export default function VideoUpload() {
         } finally {
             setUploading(false);
             setUploadProgress(0);
+            setUploadedMB(0);
+            setTotalMB(0);
+            setUploadSpeed(0);
+            setUploadStartTime(0);
         }
     };
 
@@ -560,6 +611,12 @@ export default function VideoUpload() {
                                         </span>
                                     </div>
                                     <Progress value={uploadProgress} />
+                                    <div className="space-y-1 mt-1">
+                                        <div className="flex justify-between text-xs text-gray-500">
+                                            <span>{uploadedMB.toFixed(2)} MB / {totalMB.toFixed(2)} MB</span>
+                                        </div>
+                                        
+                                    </div>
                                 </div>
                             )}
                         </div>

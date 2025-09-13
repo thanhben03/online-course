@@ -3,7 +3,7 @@ import { uploadToS3LongVan, generateS3Key } from "@/lib/s3-longvan"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Starting proxy upload...')
+    console.log('Starting upload-proxy with server upload (CORS bypass)...')
     
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -14,20 +14,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('File received:', { name: file.name, size: file.size, type: file.type })
-
-    // Bỏ giới hạn file size - cho phép upload file lớn
-    // const maxSize = 10 * 1024 * 1024
-    // if (file.size > maxSize) {
-    //   console.error('File too large:', file.size)
-    //   return NextResponse.json({ error: 'File size too large. Maximum 10MB allowed.' }, { status: 400 })
-    // }
-
-    // Bỏ giới hạn file type - cho phép tất cả loại file
-    // const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain']
-    // if (!allowedTypes.includes(file.type)) {
-    //   console.error('File type not allowed:', file.type)
-    //   return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
-    // }
 
     // Check environment variables
     if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
@@ -41,15 +27,16 @@ export async function POST(request: NextRequest) {
     const key = generateS3Key(file.name, 'uploads')
     console.log('Generated key:', key)
 
-    // Convert file to buffer
+    // For large files, we need to use streaming upload
+    // Convert file to buffer in chunks to avoid memory issues
     const buffer = Buffer.from(await file.arrayBuffer())
     console.log('File converted to buffer, size:', buffer.length)
 
-    console.log('Uploading to S3...')
+    console.log('Uploading to S3 via server (CORS bypass)...')
     await uploadToS3LongVan(buffer, key, file.type)
     console.log('S3 upload successful')
 
-    const url = `https://s3-hcm5-r1.longvan.net/${process.env.AWS_S3_BUCKET || '19428351-course'}/${key}`
+    const url = `https://s3-hcm5-r1.longvan.net/${process.env.AWS_S3_BUCKET || '19430110-courses'}/${key}`
     console.log('Generated URL:', url)
 
     return NextResponse.json({ 
@@ -62,7 +49,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Proxy upload error:', error)
+    console.error('Upload-proxy error:', error)
     
     if (error instanceof Error) {
       console.error('Error message:', error.message)

@@ -38,6 +38,10 @@ export default function UploadTestPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [uploadedMB, setUploadedMB] = useState(0)
+  const [totalMB, setTotalMB] = useState(0)
+  const [uploadSpeed, setUploadSpeed] = useState(0)
+  const [uploadStartTime, setUploadStartTime] = useState<number>(0)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [error, setError] = useState<string>("")
   const [success, setSuccess] = useState<string>("")
@@ -88,39 +92,79 @@ export default function UploadTestPage() {
     if (!selectedFile) return;
     setUploading(true);
     setProgress(0);
+    setUploadedMB(0);
+    setTotalMB(selectedFile.size / (1024 * 1024)); // Convert bytes to MB
+    setUploadSpeed(0);
+    setUploadStartTime(Date.now());
     setError("");
     setSuccess("");
 
     try {
+      console.log('Starting upload via upload-proxy (server upload)...');
+
       // Tạo FormData để gửi file
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      // Sử dụng XMLHttpRequest để theo dõi tiến trình upload
+      const xhr = new XMLHttpRequest();
 
-      // Upload qua proxy API
-      const response = await fetch('/api/upload-proxy', {
-        method: 'POST',
-        body: formData
+      // Promise để handle XMLHttpRequest
+      const uploadPromise = new Promise<any>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const progressPercent = Math.round((event.loaded / event.total) * 100);
+            const uploadedMegabytes = event.loaded / (1024 * 1024);
+            const totalMegabytes = event.total / (1024 * 1024);
+            
+            // Tính tốc độ upload (MB/s)
+            const currentTime = Date.now();
+            const elapsedSeconds = (currentTime - uploadStartTime) / 1000;
+            const currentSpeed = elapsedSeconds > 0 ? uploadedMegabytes / elapsedSeconds : 0;
+            
+            setProgress(progressPercent);
+            setUploadedMB(uploadedMegabytes);
+            setTotalMB(totalMegabytes);
+            setUploadSpeed(currentSpeed);
+            
+            console.log(`🚀 UPLOAD PROGRESS THẬT: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
+            console.log(`📊 Bytes uploaded: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              resolve(result);
+            } catch (e) {
+              reject(new Error('Invalid response format'));
+            }
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+          }
+        });
+
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error occurred'));
+        });
+
+        xhr.addEventListener('abort', () => {
+          reject(new Error('Upload was aborted'));
+        });
+
+        xhr.open('POST', '/api/upload-proxy');
+        xhr.send(formData);
       });
 
-      const result = await response.json();
+      const result = await uploadPromise;
 
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         throw new Error(result.error || 'Upload failed');
       }
 
-      clearInterval(progressInterval);
       setProgress(100);
+      console.log('File uploaded successfully via server:', result.key);
 
       const uploadedFile: UploadedFile = {
         url: result.url,
@@ -144,6 +188,10 @@ export default function UploadTestPage() {
     } finally {
       setUploading(false);
       setProgress(0);
+      setUploadedMB(0);
+      setTotalMB(0);
+      setUploadSpeed(0);
+      setUploadStartTime(0);
     }
   };
 
@@ -176,7 +224,7 @@ export default function UploadTestPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Test Upload S3 Long Vân</h1>
-            <p className="text-gray-600">Thử nghiệm chức năng upload file lên S3 Long Vân với Pre-signed URL và Referer Policy</p>
+            <p className="text-gray-600">Upload file lên S3 Long Vân qua Server Upload (CORS Bypass - Vercel Compatible - Không giới hạn dung lượng)</p>
           </div>
 
           {/* Configuration Info */}
@@ -184,7 +232,7 @@ export default function UploadTestPage() {
             <CardHeader>
               <CardTitle className="text-blue-900">Cấu hình S3 Long Vân</CardTitle>
               <CardDescription className="text-blue-700">
-                Endpoint: s3-hcm5-r1.longvan.net | Bucket: {BUCKET_NAME} | Pre-signed URL + Referer
+                Endpoint: s3-hcm5-r1.longvan.net | Bucket: {BUCKET_NAME} | Server Upload (CORS Bypass)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -192,7 +240,7 @@ export default function UploadTestPage() {
                 <div>
                   <Label className="text-blue-800">Upload Method</Label>
                   <Input 
-                    value="Pre-signed URL + Referer" 
+                    value="Server Upload (CORS Bypass)" 
                     readOnly 
                     className="bg-white"
                   />
@@ -302,6 +350,16 @@ export default function UploadTestPage() {
                     <span>{progress}%</span>
                   </div>
                   <Progress value={progress} className="h-2" />
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>{uploadedMB.toFixed(2)} MB / {totalMB.toFixed(2)} MB</span>
+                      <span>{((uploadedMB / totalMB) * 100).toFixed(1)}% hoàn thành</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-blue-600">
+                      <span>📊 Upload thật từ browser → server</span>
+                      <span>⚡ {uploadSpeed.toFixed(2)} MB/s</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
