@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     console.log('S3 upload successful')
 
     // Tạo URL công khai
-    const avatarUrl = `https://s3-hcm5-r1.longvan.net/${process.env.AWS_S3_BUCKET || '19428351-course'}/${key}`
+    const avatarUrl = `https://s3-hcm5-r1.longvan.net/${process.env.AWS_S3_BUCKET || '19430110-courses'}/${key}`
 
     // Lấy avatar URL cũ để xóa (nếu không phải placeholder)
     const oldAvatarUrl = instructor[0].avatar_url
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (oldAvatarUrl && !oldAvatarUrl.includes('placeholder')) {
       // Trích xuất key từ URL cũ
       const urlParts = oldAvatarUrl.split('/')
-      const bucketIndex = urlParts.findIndex((part: string) => part === (process.env.AWS_S3_BUCKET || '19428351-course'))
+      const bucketIndex = urlParts.findIndex((part: string) => part === (process.env.AWS_S3_BUCKET || '19430110-courses'))
       if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
         oldKey = urlParts.slice(bucketIndex + 1).join('/')
       }
