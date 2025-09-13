@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Save, X, GripVertical } from 'lucide-react';
 import { Instructor, CreateInstructorData, UpdateInstructorData } from '@/lib/services/instructorService';
+import { AvatarUpload } from '@/components/AvatarUpload';
 
 export default function InstructorManagement() {
   const [instructors, setInstructors] = useState<Instructor[]>([]);
@@ -308,14 +309,38 @@ export default function InstructorManagement() {
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="avatar_url">Ảnh đại diện</Label>
-                  <Input
-                    id="avatar_url"
-                    value={formData.avatar_url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
-                    placeholder="/placeholder-user.jpg"
-                  />
+                <div className="md:col-span-2">
+                  <Label>Ảnh đại diện</Label>
+                  <div className="flex gap-4 items-start">
+                    <AvatarUpload
+                      currentAvatarUrl={formData.avatar_url}
+                      instructorId={editingId || 'new'}
+                      instructorName={formData.name || 'Giảng viên mới'}
+                      onUploadSuccess={(newAvatarUrl) => {
+                        setFormData(prev => ({ ...prev, avatar_url: newAvatarUrl }));
+                      }}
+                      size="lg"
+                      disabled={!editingId} // Chỉ cho phép upload khi đang edit instructor đã tồn tại
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor="avatar_url">Hoặc nhập URL trực tiếp</Label>
+                      <Input
+                        id="avatar_url"
+                        value={formData.avatar_url}
+                        onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
+                        placeholder="/placeholder-user.jpg"
+                      />
+                      {editingId ? (
+                        <p className="text-xs text-green-600 mt-1">
+                          ✅ Có thể upload ảnh mới
+                        </p>
+                      ) : (
+                        <p className="text-xs text-orange-600 mt-1">
+                          ⚠️ Tạo giảng viên trước khi upload ảnh
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="courses_count">Số khóa học</Label>
@@ -409,11 +434,29 @@ export default function InstructorManagement() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full overflow-hidden">
-                    <img
-                      src={instructor.avatar_url}
-                      alt={instructor.name}
-                      className="w-full h-full object-cover"
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 rounded-full overflow-hidden">
+                      <img
+                        src={instructor.avatar_url}
+                        alt={instructor.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <AvatarUpload
+                      currentAvatarUrl={instructor.avatar_url}
+                      instructorId={instructor.id}
+                      instructorName={instructor.name}
+                      onUploadSuccess={(newAvatarUrl) => {
+                        // Cập nhật state local để hiển thị ngay
+                        setInstructors(prev => 
+                          prev.map(inst => 
+                            inst.id === instructor.id 
+                              ? { ...inst, avatar_url: newAvatarUrl }
+                              : inst
+                          )
+                        );
+                      }}
+                      size="sm"
                     />
                   </div>
                   <div>

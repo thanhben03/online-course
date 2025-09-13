@@ -27,6 +27,7 @@ import {
     BookOpen,
     MessageCircle
 } from "lucide-react";
+import { AvatarUpload } from "@/components/AvatarUpload";
 
 interface SiteSetting {
     id: number;
@@ -571,13 +572,22 @@ Bằng việc đồng ý với nội quy này, bạn cam kết tuân thủ các 
                                         onChange={(e) => setInsCompany(e.target.value)}
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Ảnh đại diện (URL)</Label>
-                                    <Input
-                                        value={insAvatar}
-                                        onChange={(e) => setInsAvatar(e.target.value)}
-                                        placeholder="/placeholder-user.jpg"
-                                    />
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label>Ảnh đại diện</Label>
+                                    <div className="flex gap-4 items-start">
+                                        <AvatarUpload
+                                            currentAvatarUrl={insAvatar}
+                                            instructorId="site-settings"
+                                            instructorName={insName || 'Giảng viên'}
+                                            onUploadSuccess={(newAvatarUrl) => {
+                                                setInsAvatar(newAvatarUrl);
+                                                // Tự động lưu setting khi upload thành công
+                                                saveSetting('instructor_avatar', newAvatarUrl);
+                                            }}
+                                            size="lg"
+                                            uploadType="site-settings"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Số học viên</Label>

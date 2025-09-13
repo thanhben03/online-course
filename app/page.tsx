@@ -128,26 +128,26 @@ async function getHomepageStats() {
         const settings = await siteSettingsService.getByKeys(keys);
         return [
             {
-                number: settings['stats_subscribers_number'] || '2,000+',
-                label: settings['stats_subscribers_label'] || 'Subscribers',
+                number: settings['stats_subscribers_number'],
+                label: settings['stats_subscribers_label'],
                 icon: <Users className="h-6 w-6" />,
             },
             {
-                number: settings['stats_topics_number'] || '7',
-                label: settings['stats_topics_label'] || 'Chuyên đề',
+                number: settings['stats_topics_number'],
+                label: settings['stats_topics_label'],
                 icon: <BookOpen className="h-6 w-6" />,
             },
             {
-                number: settings['stats_support_number'] || '24/7',
-                label: settings['stats_support_label'] || 'Hỗ trợ',
+                number: settings['stats_support_number'],
+                label: settings['stats_support_label'],
                 icon: <MessageCircle className="h-6 w-6" />,
             },
         ];
     } catch {
         return [
-            { number: '2,000+', label: 'Subscribers', icon: <Users className="h-6 w-6" /> },
-            { number: '7', label: 'Chuyên đề', icon: <BookOpen className="h-6 w-6" /> },
-            { number: '24/7', label: 'Hỗ trợ', icon: <MessageCircle className="h-6 w-6" /> },
+            { number: '', label: 'Subscribers', icon: <Users className="h-6 w-6" /> },
+            { number: '', label: 'Chuyên đề', icon: <BookOpen className="h-6 w-6" /> },
+            { number: '', label: 'Hỗ trợ', icon: <MessageCircle className="h-6 w-6" /> },
         ];
     }
 }
