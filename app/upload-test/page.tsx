@@ -106,7 +106,7 @@ export default function UploadTestPage() {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      // Sử dụng XMLHttpRequest để theo dõi tiến trình upload
+      // Sử dụng XMLHttpRequest với streaming để bypass Vercel limits
       const xhr = new XMLHttpRequest();
 
       // Promise để handle XMLHttpRequest
@@ -127,8 +127,8 @@ export default function UploadTestPage() {
             setTotalMB(totalMegabytes);
             setUploadSpeed(currentSpeed);
             
-            console.log(`🚀 UPLOAD PROGRESS THẬT: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
-            console.log(`📊 Bytes uploaded: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
+            console.log(`🚀 STREAMING UPLOAD PROGRESS: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
+            console.log(`📊 Bytes streamed: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
           }
         });
 
@@ -141,20 +141,26 @@ export default function UploadTestPage() {
               reject(new Error('Invalid response format'));
             }
           } else {
-            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+            reject(new Error(`Streaming upload failed: ${xhr.status} ${xhr.statusText}`));
           }
         });
 
         xhr.addEventListener('error', () => {
-          reject(new Error('Network error occurred'));
+          reject(new Error('Network error occurred during streaming'));
         });
 
         xhr.addEventListener('abort', () => {
-          reject(new Error('Upload was aborted'));
+          reject(new Error('Streaming upload was aborted'));
         });
 
-        xhr.open('POST', '/api/upload-proxy');
-        xhr.send(formData);
+        // Sử dụng streaming endpoint với custom headers
+        xhr.open('POST', '/api/upload-stream');
+        xhr.setRequestHeader('Content-Type', selectedFile.type);
+        xhr.setRequestHeader('Content-Length', selectedFile.size.toString());
+        xhr.setRequestHeader('X-File-Name', selectedFile.name);
+        
+        // Gửi file trực tiếp thay vì FormData để streaming
+        xhr.send(selectedFile);
       });
 
       const result = await uploadPromise;
@@ -224,7 +230,7 @@ export default function UploadTestPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Test Upload S3 Long Vân</h1>
-            <p className="text-gray-600">Upload file lên S3 Long Vân qua Server Upload (CORS Bypass - Vercel Compatible - Không giới hạn dung lượng)</p>
+            <p className="text-gray-600">Upload file lên S3 Long Vân qua Streaming API (Bypass Vercel 4.5MB Limit - Không giới hạn dung lượng)</p>
           </div>
 
           {/* Configuration Info */}
@@ -232,7 +238,7 @@ export default function UploadTestPage() {
             <CardHeader>
               <CardTitle className="text-blue-900">Cấu hình S3 Long Vân</CardTitle>
               <CardDescription className="text-blue-700">
-                Endpoint: s3-hcm5-r1.longvan.net | Bucket: {BUCKET_NAME} | Server Upload (CORS Bypass)
+                Endpoint: s3-hcm5-r1.longvan.net | Bucket: {BUCKET_NAME} | Streaming Upload (Vercel Bypass)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -240,7 +246,7 @@ export default function UploadTestPage() {
                 <div>
                   <Label className="text-blue-800">Upload Method</Label>
                   <Input 
-                    value="Server Upload (CORS Bypass)" 
+                    value="Streaming Upload (Vercel Bypass)" 
                     readOnly 
                     className="bg-white"
                   />
@@ -356,7 +362,7 @@ export default function UploadTestPage() {
                       <span>{((uploadedMB / totalMB) * 100).toFixed(1)}% hoàn thành</span>
                     </div>
                     <div className="flex justify-between text-xs text-blue-600">
-                      <span>📊 Upload thật từ browser → server</span>
+                      <span>🌊 Streaming Upload (Bypass Vercel Limit)</span>
                       <span>⚡ {uploadSpeed.toFixed(2)} MB/s</span>
                     </div>
                   </div>

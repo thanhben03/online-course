@@ -145,7 +145,7 @@ export default function VideoUpload() {
                 const fileFormData = new FormData();
                 fileFormData.append("file", file);
 
-                // Sử dụng XMLHttpRequest để theo dõi tiến trình upload
+                // Sử dụng XMLHttpRequest với streaming để bypass Vercel limits
                 const xhr = new XMLHttpRequest();
 
                 // Promise để handle XMLHttpRequest
@@ -165,8 +165,8 @@ export default function VideoUpload() {
                             setUploadedMB(uploadedMegabytes);
                             setUploadSpeed(currentSpeed);
                             
-                            console.log(`🚀 ADMIN UPLOAD PROGRESS THẬT: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
-                            console.log(`📊 Bytes uploaded: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
+                            console.log(`🌊 ADMIN STREAMING UPLOAD: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
+                            console.log(`📊 Bytes streamed: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
                         }
                     });
 
@@ -179,20 +179,26 @@ export default function VideoUpload() {
                                 reject(new Error('Invalid response format'));
                             }
                         } else {
-                            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+                            reject(new Error(`Streaming upload failed: ${xhr.status} ${xhr.statusText}`));
                         }
                     });
 
                     xhr.addEventListener('error', () => {
-                        reject(new Error('Network error occurred'));
+                        reject(new Error('Network error occurred during streaming'));
                     });
 
                     xhr.addEventListener('abort', () => {
-                        reject(new Error('Upload was aborted'));
+                        reject(new Error('Streaming upload was aborted'));
                     });
 
-                    xhr.open('POST', '/api/upload-proxy');
-                    xhr.send(fileFormData);
+                    // Sử dụng streaming endpoint với custom headers
+                    xhr.open('POST', '/api/upload-stream');
+                    xhr.setRequestHeader('Content-Type', file.type);
+                    xhr.setRequestHeader('Content-Length', file.size.toString());
+                    xhr.setRequestHeader('X-File-Name', file.name);
+                    
+                    // Gửi file trực tiếp thay vì FormData để streaming
+                    xhr.send(file);
                 });
 
                 const result = await uploadPromise;
