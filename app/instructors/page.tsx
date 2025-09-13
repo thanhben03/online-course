@@ -107,6 +107,7 @@ async function getInstructorContent() {
     ];
     try {
         const map = await siteSettingsService.getByKeys(keys);
+        console.log(map);
         const expertise = (map['instructor_expertise_csv'] || '').split(',').map(s => s.trim()).filter(Boolean);
         const achievements = (map['instructor_achievements_csv'] || '').split(',').map(s => s.trim()).filter(Boolean);
         const education = (() => {
