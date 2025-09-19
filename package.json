@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=512 --gc-interval=100' next dev",
-    "dev:production": "NODE_OPTIONS='--max-old-space-size=768 --gc-interval=100 --optimize-for-size' next dev",
+    "dev": "NODE_OPTIONS='--max-old-space-size=512' next dev",
+    "dev:production": "NODE_OPTIONS='--max-old-space-size=768 --optimize-for-size' next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=1024' next build",
-    "start": "NODE_OPTIONS='--max-old-space-size=512 --gc-interval=100' next start",
+    "start": "NODE_OPTIONS='--max-old-space-size=512' next start",
     "lint": "next lint"
   },
   "dependencies": {
