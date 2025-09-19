@@ -153,8 +153,8 @@ export default function VideoUpload() {
                 const fileFormData = new FormData();
                 fileFormData.append("file", file);
 
-                // Upload qua proxy API với timeout lớn hơn cho file lớn
-                const uploadTimeout = file.size > 100 * 1024 * 1024 ? 15 * 60 * 1000 : 5 * 60 * 1000; // 15 phút cho file > 100MB, 5 phút cho file nhỏ
+                // Upload qua proxy API với timeout lớn hơn cho file lớn - tăng thời gian để an toàn hơn
+                const uploadTimeout = file.size > 50 * 1024 * 1024 ? 25 * 60 * 1000 : 10 * 60 * 1000; // 25 phút cho file > 50MB, 10 phút cho file nhỏ
                 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), uploadTimeout);

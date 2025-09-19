@@ -1,19 +1,19 @@
 {
   "functions": {
     "app/api/upload-proxy/route.ts": {
-      "maxDuration": 900,
+      "maxDuration": 1800,
       "memory": 1024
     },
     "app/api/upload-longvan/route.ts": {
-      "maxDuration": 900,
+      "maxDuration": 1800,
       "memory": 1024
     },
     "app/api/admin/uploads/route.ts": {
-      "maxDuration": 900,
+      "maxDuration": 1800,
       "memory": 512
     },
     "app/api/admin/upload/route.ts": {
-      "maxDuration": 900,
+      "maxDuration": 1800,
       "memory": 1024
     }
   },
@@ -34,7 +34,7 @@
         },
         {
           "key": "Keep-Alive",
-          "value": "timeout=900"
+          "value": "timeout=1800"
         }
       ]
     }

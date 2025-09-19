@@ -10,6 +10,7 @@ import {
   AbortMultipartUploadCommand
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { memoryMonitor, memorySafeSleep } from '@/lib/middleware/memoryMonitor'
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -64,7 +65,8 @@ export const uploadStreamToS3LongVan = async (
   contentLength: number
 ) => {
   const bucketName = process.env.AWS_S3_BUCKET || '19430110-courses'
-  const partSize = 5 * 1024 * 1024 // 5MB per part (minimum cho S3 multipart)
+  // Giảm chunk size xuống 3MB để tối ưu memory hơn cho VPS 1GB
+  const partSize = 3 * 1024 * 1024 // 3MB per part (tối ưu cho VPS resource hạn chế)
   
   console.log(`Starting multipart upload for ${key}, size: ${(contentLength / 1024 / 1024).toFixed(2)}MB`)
   
@@ -98,6 +100,9 @@ export const uploadStreamToS3LongVan = async (
       
       // Upload part khi buffer đủ lớn hoặc stream kết thúc
       if (buffer.length >= partSize || (done && buffer.length > 0)) {
+        // Log memory trước khi upload part
+        memoryMonitor.logMemoryStatus(`Part ${partNumber} Before`)
+        
         console.log(`Uploading part ${partNumber}, size: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`)
         
         const uploadPartCommand = new UploadPartCommand({
@@ -118,10 +123,14 @@ export const uploadStreamToS3LongVan = async (
         partNumber++
         buffer = new Uint8Array() // Reset buffer
         
-        // Force garbage collection để giải phóng memory
-        if (global.gc) {
-          global.gc()
-        }
+        // Aggressive memory cleanup cho từng part
+        memoryMonitor.forceGarbageCollection()
+        
+        // Memory-safe sleep để system có thời gian cleanup
+        await memorySafeSleep(100) // 100ms delay
+        
+        // Log memory sau cleanup
+        memoryMonitor.logMemoryStatus(`Part ${partNumber-1} After`)
       }
       
       if (done) break
