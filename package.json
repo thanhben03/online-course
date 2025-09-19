@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "NODE_OPTIONS='--max-old-space-size=2048' next build",
-    "dev": "NODE_OPTIONS='--max-old-space-size=1024 --expose-gc' next dev",
-    "dev:production": "NODE_OPTIONS='--max-old-space-size=1536 --optimize-for-size --expose-gc' next dev",
-    "start": "NODE_OPTIONS='--max-old-space-size=1536 --expose-gc' next start",
-    "start:vps": "NODE_OPTIONS='--max-old-space-size=2048 --optimize-for-size --expose-gc' next start",
-    "start:4gb": "NODE_OPTIONS='--max-old-space-size=2048 --optimize-for-size --expose-gc --max-semi-space-size=128' next start",
+    "build": "NODE_OPTIONS='--max-old-space-size=1536' next build",
+    "dev": "NODE_OPTIONS='--max-old-space-size=768 --expose-gc' next dev",
+    "dev:production": "NODE_OPTIONS='--max-old-space-size=1024 --optimize-for-size --expose-gc' next dev",
+    "start": "NODE_OPTIONS='--max-old-space-size=1024 --expose-gc' next start",
+    "start:vps": "NODE_OPTIONS='--max-old-space-size=1536 --optimize-for-size --expose-gc' next start",
+    "start:4gb": "NODE_OPTIONS='--max-old-space-size=1536 --optimize-for-size --expose-gc --max-semi-space-size=64' next start",
+    "start:safe": "NODE_OPTIONS='--max-old-space-size=1024 --optimize-for-size --expose-gc --max-semi-space-size=32' next start",
     "lint": "next lint"
   },
   "dependencies": {
