@@ -10,6 +10,7 @@ import {
   AbortMultipartUploadCommand
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { Readable } from 'stream'
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -56,112 +57,69 @@ export const uploadToS3LongVan = async (file: Buffer, key: string, contentType: 
   return await s3Client.send(command)
 }
 
-// Multipart upload cho file lớn để tránh memory overflow
 export const uploadStreamToS3LongVan = async (
-  stream: ReadableStream<Uint8Array>, 
-  key: string, 
+  stream: Readable, // <- Node stream
+  key: string,
   contentType: string,
   contentLength: number
 ) => {
-  const bucketName = process.env.AWS_S3_BUCKET || '19430110-courses'
-  const partSize = 5 * 1024 * 1024 // 5MB per part (minimum cho S3 multipart)
-  
-  console.log(`Starting multipart upload for ${key}, size: ${(contentLength / 1024 / 1024).toFixed(2)}MB`)
-  
-  // Bước 1: Khởi tạo multipart upload
+  const bucketName = process.env.AWS_S3_BUCKET || '19430110-courses';
+  const partSize = 5 * 1024 * 1024;
+
   const createCommand = new CreateMultipartUploadCommand({
     Bucket: bucketName,
     Key: key,
     ContentType: contentType,
     ACL: 'public-read',
-  })
-  
-  const { UploadId } = await s3Client.send(createCommand)
-  console.log(`Multipart upload initiated with ID: ${UploadId}`)
-  
-  const parts: { ETag: string; PartNumber: number }[] = []
-  const reader = stream.getReader()
-  let partNumber = 1
-  let buffer = new Uint8Array()
-  
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      
-      if (value) {
-        // Thêm data vào buffer
-        const newBuffer = new Uint8Array(buffer.length + value.length)
-        newBuffer.set(buffer)
-        newBuffer.set(value, buffer.length)
-        buffer = newBuffer
-      }
-      
-      // Upload part khi buffer đủ lớn hoặc stream kết thúc
-      if (buffer.length >= partSize || (done && buffer.length > 0)) {
-        console.log(`Uploading part ${partNumber}, size: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`)
-        
-        const uploadPartCommand = new UploadPartCommand({
+  });
+  const { UploadId } = await s3Client.send(createCommand);
+
+  const parts: { ETag: string; PartNumber: number }[] = [];
+  let partNumber = 1;
+  let chunkBuffer = Buffer.alloc(0);
+
+  for await (const chunk of stream) {
+    chunkBuffer = Buffer.concat([chunkBuffer, chunk]);
+    if (chunkBuffer.length >= partSize) {
+      const uploadChunk = chunkBuffer.subarray(0, partSize);
+
+      const partResult = await s3Client.send(
+        new UploadPartCommand({
           Bucket: bucketName,
           Key: key,
           PartNumber: partNumber,
           UploadId,
-          Body: buffer,
+          Body: uploadChunk,
         })
-        
-        const partResult = await s3Client.send(uploadPartCommand)
-        parts.push({
-          ETag: partResult.ETag!,
-          PartNumber: partNumber,
-        })
-        
-        console.log(`Part ${partNumber} uploaded successfully`)
-        partNumber++
-        buffer = new Uint8Array() // Reset buffer
-        
-        // Force garbage collection để giải phóng memory
-        if (global.gc) {
-          global.gc()
-        }
-      }
-      
-      if (done) break
+      );
+      parts.push({ ETag: partResult.ETag!, PartNumber: partNumber });
+      partNumber++;
+      chunkBuffer = chunkBuffer.subarray(partSize);
     }
-    
-    // Bước 3: Complete multipart upload
-    const completeCommand = new CompleteMultipartUploadCommand({
-      Bucket: bucketName,
-      Key: key,
-      UploadId,
-      MultipartUpload: {
-        Parts: parts,
-      },
-    })
-    
-    const result = await s3Client.send(completeCommand)
-    console.log(`Multipart upload completed successfully for ${key}`)
-    return result
-    
-  } catch (error) {
-    // Abort multipart upload nếu có lỗi
-    console.error('Multipart upload failed, aborting...', error)
-    
-    try {
-      const abortCommand = new AbortMultipartUploadCommand({
+  }
+
+  // upload phần còn lại
+  if (chunkBuffer.length > 0) {
+    const partResult = await s3Client.send(
+      new UploadPartCommand({
         Bucket: bucketName,
         Key: key,
+        PartNumber: partNumber,
         UploadId,
+        Body: chunkBuffer,
       })
-      await s3Client.send(abortCommand)
-      console.log('Multipart upload aborted successfully')
-    } catch (abortError) {
-      console.error('Failed to abort multipart upload:', abortError)
-    }
-    
-    throw error
-  } finally {
-    reader.releaseLock()
+    );
+    parts.push({ ETag: partResult.ETag!, PartNumber: partNumber });
   }
-}
+
+  const completeCommand = new CompleteMultipartUploadCommand({
+    Bucket: bucketName,
+    Key: key,
+    UploadId,
+    MultipartUpload: { Parts: parts },
+  });
+  return await s3Client.send(completeCommand);
+};
 
 export const deleteFromS3LongVan = async (key: string) => {
   const command = new DeleteObjectCommand({
