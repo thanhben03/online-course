@@ -64,7 +64,7 @@ export const uploadStreamToS3LongVan = async (
   contentLength: number
 ) => {
   const bucketName = process.env.AWS_S3_BUCKET || '19430110-courses';
-  const partSize = 5 * 1024 * 1024;
+  const partSize = 10 * 1024 * 1024;
 
   const createCommand = new CreateMultipartUploadCommand({
     Bucket: bucketName,

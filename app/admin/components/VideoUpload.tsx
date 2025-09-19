@@ -117,7 +117,7 @@ export default function VideoUpload() {
         }
     };
 
-    // Upload files
+    // Upload files với Presigned URL (trực tiếp lên S3)
     const handleUpload = async () => {
         if (!selectedFiles || selectedFiles.length === 0) {
             setMessage({ type: "error", text: "Vui lòng chọn file để upload" });
@@ -128,9 +128,6 @@ export default function VideoUpload() {
         setUploadProgress(0);
 
         try {
-            // Upload từng file một qua API proxy (giống upload-test)
-            const uploadedResults = [];
-
             // Calculate total file size for all files
             const totalBytes = Array.from(selectedFiles).reduce((sum, file) => sum + file.size, 0);
             setTotalMB(totalBytes / (1024 * 1024));
@@ -138,46 +135,81 @@ export default function VideoUpload() {
             setUploadSpeed(0);
             setUploadStartTime(Date.now());
 
-            for (const file of Array.from(selectedFiles)) {
-                console.log('Starting upload via upload-proxy (server upload) for file:', file.name);
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                console.log(`🚀 PRESIGNED UPLOAD: Starting upload ${i+1}/${selectedFiles.length} for ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
 
-                // Tạo FormData để gửi file qua upload proxy
-                const fileFormData = new FormData();
-                fileFormData.append("file", file);
-
-                // Upload với timeout lớn cho file > 1GB
-                const uploadTimeout = file.size > 500 * 1024 * 1024 ? 30 * 60 * 1000 : 15 * 60 * 1000; // 30 phút cho file > 500MB
-                
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), uploadTimeout);
-                
-                console.log(`🚀 VPS UPLOAD: Starting upload via proxy for ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-                
-                const uploadPromise = fetch("/api/upload-proxy", {
+                // Step 1: Get presigned URL từ server
+                const urlResponse = await fetch("/api/generate-upload-url", {
                     method: "POST",
-                    body: fileFormData,
-                    signal: controller.signal,
-                }).then(async (response) => {
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
-                    }
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        contentType: file.type,
+                        folder: 'uploads'
+                    }),
+                });
 
-                    const result = await response.json();
-                    if (!result.success) {
-                        throw new Error(result.error || "Upload failed");
-                    }
+                if (!urlResponse.ok) {
+                    const errorText = await urlResponse.text();
+                    throw new Error(`Failed to get upload URL: ${urlResponse.status} - ${errorText}`);
+                }
+
+                const urlResult = await urlResponse.json();
+                if (!urlResult.success) {
+                    throw new Error(urlResult.error || "Failed to generate upload URL");
+                }
+
+                console.log('✅ Got presigned URL:', urlResult.key);
+
+                // Step 2: Upload trực tiếp lên S3 với progress tracking
+                const uploadPromise = new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
                     
-                    return result;
-                }).catch((error) => {
-                    clearTimeout(timeoutId);
-                    
-                    if (error.name === 'AbortError') {
-                        throw new Error(`Upload timeout cho file ${file.name}. File quá lớn hoặc mạng chậm.`);
-                    }
-                    throw error;
+                    // Track upload progress
+                    xhr.upload.addEventListener('progress', (event) => {
+                        if (event.lengthComputable) {
+                            const fileProgress = (event.loaded / event.total) * 100;
+                            const overallProgress = ((i * 100) + fileProgress) / selectedFiles.length;
+                            setUploadProgress(overallProgress);
+                            
+                            // Update upload stats
+                            const uploadedBytes = (i * file.size) + event.loaded;
+                            setUploadedMB(uploadedBytes / (1024 * 1024));
+                            
+                            const elapsed = (Date.now() - uploadStartTime) / 1000;
+                            if (elapsed > 0) {
+                                const speed = (uploadedBytes / elapsed) / (1024 * 1024); // MB/s
+                                setUploadSpeed(speed);
+                            }
+                        }
+                    });
+
+                    xhr.onload = () => {
+                        if (xhr.status === 200 || xhr.status === 204) {
+                            resolve(urlResult);
+                        } else {
+                            reject(new Error(`Upload failed with status: ${xhr.status}`));
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        reject(new Error('Network error during upload'));
+                    };
+
+                    xhr.ontimeout = () => {
+                        reject(new Error('Upload timeout'));
+                    };
+
+                    // Set timeout dựa trên file size
+                    xhr.timeout = file.size > 500 * 1024 * 1024 ? 30 * 60 * 1000 : 15 * 60 * 1000; // 30 phút cho file > 500MB
+
+                    // Upload file với PUT method (presigned URL)
+                    xhr.open('PUT', urlResult.uploadUrl);
+                    xhr.setRequestHeader('Content-Type', file.type);
+                    xhr.send(file);
                 });
 
                 const result = await uploadPromise;
@@ -186,7 +218,7 @@ export default function VideoUpload() {
                     throw new Error(result.error || 'Upload failed');
                 }
 
-                console.log('File uploaded successfully via server:', result.key);
+                console.log('✅ File uploaded successfully to S3:', result.key);
 
                 // Lưu thông tin file vào database
                 const saveResponse = await fetch("/api/admin/uploads", {
@@ -197,11 +229,11 @@ export default function VideoUpload() {
                     body: JSON.stringify({
                         filename: result.fileName,
                         original_name: file.name,
-                        file_size: result.fileSize,
-                        file_type: result.fileType,
+                        file_size: file.size,
+                        file_type: file.type,
                         s3_key: result.key,
-                        s3_url: result.url,
-                        user_id: null, // Có thể thêm user ID nếu cần
+                        s3_url: result.finalUrl,
+                        user_id: null,
                         lesson_id: selectedLessonId
                     }),
                 });
@@ -214,11 +246,11 @@ export default function VideoUpload() {
 
                 const uploadedFile: UploadedFile = {
                     id: saveResult.upload?.id,
-                    url: result.url,
+                    url: result.finalUrl,
                     key: result.key,
                     fileName: result.fileName,
-                    fileSize: result.fileSize,
-                    fileType: result.fileType,
+                    fileSize: file.size,
+                    fileType: file.type,
                     uploadedAt: new Date(),
                 };
 
