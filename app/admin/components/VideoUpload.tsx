@@ -87,6 +87,10 @@ export default function VideoUpload() {
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadedMB, setUploadedMB] = useState(0);
+    const [totalMB, setTotalMB] = useState(0);
+    const [uploadSpeed, setUploadSpeed] = useState(0);
+    const [uploadStartTime, setUploadStartTime] = useState<number>(0);
     const [message, setMessage] = useState<{
         type: "success" | "error";
         text: string;
@@ -127,73 +131,83 @@ export default function VideoUpload() {
             // Upload từng file một qua API proxy (giống upload-test)
             const uploadedResults = [];
 
-            // Simulate progress như upload-test
-            const progressInterval = setInterval(() => {
-                setUploadProgress((prev) => {
-                    if (prev >= 90) {
-                        clearInterval(progressInterval);
-                        return 90;
-                    }
-                    return prev + 10;
-                });
-            }, 200);
-
-            let currentFileIndex = 0;
-            const totalFiles = selectedFiles.length;
+            // Calculate total file size for all files
+            const totalBytes = Array.from(selectedFiles).reduce((sum, file) => sum + file.size, 0);
+            setTotalMB(totalBytes / (1024 * 1024));
+            setUploadedMB(0);
+            setUploadSpeed(0);
+            setUploadStartTime(Date.now());
 
             for (const file of Array.from(selectedFiles)) {
-                currentFileIndex++;
-                
-                // Cập nhật progress cho file hiện tại
-                setUploadProgress(Math.round((currentFileIndex - 1) / totalFiles * 80)); // 80% cho upload, 20% cho save
-                
-                console.log(`Uploading file ${currentFileIndex}/${totalFiles}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-                
-                // Tạo FormData để gửi file (giống upload-test)
+                console.log('Starting upload via upload-proxy (server upload) for file:', file.name);
+
+                // Tạo FormData để gửi file qua server (bypass CORS)
                 const fileFormData = new FormData();
                 fileFormData.append("file", file);
 
-                // Upload qua proxy API với timeout lớn hơn cho file lớn - tăng thời gian để an toàn hơn
-                const uploadTimeout = file.size > 50 * 1024 * 1024 ? 25 * 60 * 1000 : 10 * 60 * 1000; // 25 phút cho file > 50MB, 10 phút cho file nhỏ
-                
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), uploadTimeout);
-                
-                let result: any;
-                
-                try {
-                    const response = await fetch("/api/upload-proxy", {
-                        method: "POST",
-                        body: fileFormData,
-                        signal: controller.signal,
+                // Sử dụng XMLHttpRequest với streaming để bypass Vercel limits
+                const xhr = new XMLHttpRequest();
+
+                // Promise để handle XMLHttpRequest
+                const uploadPromise = new Promise<any>((resolve, reject) => {
+                    xhr.upload.addEventListener('progress', (event) => {
+                        if (event.lengthComputable) {
+                            const progressPercent = Math.round((event.loaded / event.total) * 100);
+                            const uploadedMegabytes = event.loaded / (1024 * 1024);
+                            const totalMegabytes = event.total / (1024 * 1024);
+                            
+                            // Tính tốc độ upload (MB/s)
+                            const currentTime = Date.now();
+                            const elapsedSeconds = (currentTime - uploadStartTime) / 1000;
+                            const currentSpeed = elapsedSeconds > 0 ? uploadedMegabytes / elapsedSeconds : 0;
+                            
+                            setUploadProgress(progressPercent);
+                            setUploadedMB(uploadedMegabytes);
+                            setUploadSpeed(currentSpeed);
+                            
+                            console.log(`🌊 ADMIN STREAMING UPLOAD: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
+                            console.log(`📊 Bytes streamed: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
+                        }
                     });
-                    
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
-                    }
 
-                    result = await response.json();
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                const result = JSON.parse(xhr.responseText);
+                                resolve(result);
+                            } catch (e) {
+                                reject(new Error('Invalid response format'));
+                            }
+                        } else {
+                            reject(new Error(`Streaming upload failed: ${xhr.status} ${xhr.statusText}`));
+                        }
+                    });
 
-                    if (!result.success) {
-                        throw new Error(result.error || "Upload failed");
-                    }
+                    xhr.addEventListener('error', () => {
+                        reject(new Error('Network error occurred during streaming'));
+                    });
+
+                    xhr.addEventListener('abort', () => {
+                        reject(new Error('Streaming upload was aborted'));
+                    });
+
+                    // Sử dụng streaming endpoint với custom headers
+                    xhr.open('POST', '/api/upload-stream');
+                    xhr.setRequestHeader('Content-Type', file.type);
+                    xhr.setRequestHeader('Content-Length', file.size.toString());
+                    xhr.setRequestHeader('X-File-Name', file.name);
                     
-                    console.log(`File ${currentFileIndex}/${totalFiles} uploaded successfully: ${result.fileName}`);
-                    
-                } catch (uploadError: any) {
-                    clearTimeout(timeoutId);
-                    
-                    if (uploadError.name === 'AbortError') {
-                        throw new Error(`Upload timeout cho file ${file.name}. File quá lớn hoặc mạng chậm.`);
-                    }
-                    throw uploadError;
+                    // Gửi file trực tiếp thay vì FormData để streaming
+                    xhr.send(file);
+                });
+
+                const result = await uploadPromise;
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Upload failed');
                 }
-                
-                // Cập nhật progress sau khi upload thành công
-                setUploadProgress(Math.round(currentFileIndex / totalFiles * 80));
+
+                console.log('File uploaded successfully via server:', result.key);
 
                 // Lưu thông tin file vào database
                 const saveResponse = await fetch("/api/admin/uploads", {
@@ -219,9 +233,6 @@ export default function VideoUpload() {
                     console.warn("Failed to save file info to database:", saveResult.error);
                 }
 
-                // Cập nhật progress cho việc save database
-                setUploadProgress(Math.round(currentFileIndex / totalFiles * 90));
-
                 const uploadedFile: UploadedFile = {
                     id: saveResult.upload?.id,
                     url: result.url,
@@ -236,7 +247,6 @@ export default function VideoUpload() {
                 setUploadedFiles((prev) => [uploadedFile, ...prev]);
             }
 
-            clearInterval(progressInterval);
             setUploadProgress(100);
 
             setMessage({
@@ -260,6 +270,10 @@ export default function VideoUpload() {
         } finally {
             setUploading(false);
             setUploadProgress(0);
+            setUploadedMB(0);
+            setTotalMB(0);
+            setUploadSpeed(0);
+            setUploadStartTime(0);
         }
     };
 
@@ -603,6 +617,12 @@ export default function VideoUpload() {
                                         </span>
                                     </div>
                                     <Progress value={uploadProgress} />
+                                    <div className="space-y-1 mt-1">
+                                        <div className="flex justify-between text-xs text-gray-500">
+                                            <span>{uploadedMB.toFixed(2)} MB / {totalMB.toFixed(2)} MB</span>
+                                        </div>
+                                        
+                                    </div>
                                 </div>
                             )}
                         </div>

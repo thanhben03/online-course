@@ -1,20 +1,16 @@
 {
   "functions": {
     "app/api/upload-proxy/route.ts": {
-      "maxDuration": 1800,
-      "memory": 1024
+      "maxDuration": 300
+    },
+    "app/api/upload-stream/route.ts": {
+      "maxDuration": 300
     },
     "app/api/upload-longvan/route.ts": {
-      "maxDuration": 1800,
-      "memory": 1024
+      "maxDuration": 300
     },
     "app/api/admin/uploads/route.ts": {
-      "maxDuration": 1800,
-      "memory": 512
-    },
-    "app/api/admin/upload/route.ts": {
-      "maxDuration": 1800,
-      "memory": 1024
+      "maxDuration": 300
     }
   },
   "regions": ["hnd1"],
@@ -22,21 +18,6 @@
     {
       "source": "/(.*)",
       "destination": "/"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/upload-proxy",
-      "headers": [
-        {
-          "key": "Connection",
-          "value": "keep-alive"
-        },
-        {
-          "key": "Keep-Alive",
-          "value": "timeout=1800"
-        }
-      ]
     }
   ]
 }
