@@ -141,64 +141,43 @@ export default function VideoUpload() {
             for (const file of Array.from(selectedFiles)) {
                 console.log('Starting upload via upload-proxy (server upload) for file:', file.name);
 
-                // Tạo FormData để gửi file qua server (bypass CORS)
+                // Tạo FormData để gửi file qua upload proxy
                 const fileFormData = new FormData();
                 fileFormData.append("file", file);
 
-                // Sử dụng XMLHttpRequest với streaming để bypass Vercel limits
-                const xhr = new XMLHttpRequest();
-
-                // Promise để handle XMLHttpRequest
-                const uploadPromise = new Promise<any>((resolve, reject) => {
-                    xhr.upload.addEventListener('progress', (event) => {
-                        if (event.lengthComputable) {
-                            const progressPercent = Math.round((event.loaded / event.total) * 100);
-                            const uploadedMegabytes = event.loaded / (1024 * 1024);
-                            const totalMegabytes = event.total / (1024 * 1024);
-                            
-                            // Tính tốc độ upload (MB/s)
-                            const currentTime = Date.now();
-                            const elapsedSeconds = (currentTime - uploadStartTime) / 1000;
-                            const currentSpeed = elapsedSeconds > 0 ? uploadedMegabytes / elapsedSeconds : 0;
-                            
-                            setUploadProgress(progressPercent);
-                            setUploadedMB(uploadedMegabytes);
-                            setUploadSpeed(currentSpeed);
-                            
-                            console.log(`🌊 ADMIN STREAMING UPLOAD: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
-                            console.log(`📊 Bytes streamed: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
-                        }
-                    });
-
-                    xhr.addEventListener('load', () => {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            try {
-                                const result = JSON.parse(xhr.responseText);
-                                resolve(result);
-                            } catch (e) {
-                                reject(new Error('Invalid response format'));
-                            }
-                        } else {
-                            reject(new Error(`Streaming upload failed: ${xhr.status} ${xhr.statusText}`));
-                        }
-                    });
-
-                    xhr.addEventListener('error', () => {
-                        reject(new Error('Network error occurred during streaming'));
-                    });
-
-                    xhr.addEventListener('abort', () => {
-                        reject(new Error('Streaming upload was aborted'));
-                    });
-
-                    // Sử dụng streaming endpoint với custom headers
-                    xhr.open('POST', '/api/upload-stream');
-                    xhr.setRequestHeader('Content-Type', file.type);
-                    xhr.setRequestHeader('Content-Length', file.size.toString());
-                    xhr.setRequestHeader('X-File-Name', file.name);
+                // Upload với timeout lớn cho file > 1GB
+                const uploadTimeout = file.size > 500 * 1024 * 1024 ? 30 * 60 * 1000 : 15 * 60 * 1000; // 30 phút cho file > 500MB
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), uploadTimeout);
+                
+                console.log(`🚀 VPS UPLOAD: Starting upload via proxy for ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                
+                const uploadPromise = fetch("/api/upload-proxy", {
+                    method: "POST",
+                    body: fileFormData,
+                    signal: controller.signal,
+                }).then(async (response) => {
+                    clearTimeout(timeoutId);
                     
-                    // Gửi file trực tiếp thay vì FormData để streaming
-                    xhr.send(file);
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+                    }
+
+                    const result = await response.json();
+                    if (!result.success) {
+                        throw new Error(result.error || "Upload failed");
+                    }
+                    
+                    return result;
+                }).catch((error) => {
+                    clearTimeout(timeoutId);
+                    
+                    if (error.name === 'AbortError') {
+                        throw new Error(`Upload timeout cho file ${file.name}. File quá lớn hoặc mạng chậm.`);
+                    }
+                    throw error;
                 });
 
                 const result = await uploadPromise;
