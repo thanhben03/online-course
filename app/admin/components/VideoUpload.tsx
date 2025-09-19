@@ -191,12 +191,24 @@ export default function VideoUpload() {
                         if (xhr.status === 200 || xhr.status === 204) {
                             resolve(urlResult);
                         } else {
-                            reject(new Error(`Upload failed with status: ${xhr.status}`));
+                            // Handle 403 Forbidden (CORS/Permission issue)
+                            if (xhr.status === 403) {
+                                reject(new Error('S3_PERMISSION_ERROR'));
+                            } else {
+                                reject(new Error(`Upload failed with status: ${xhr.status}`));
+                            }
                         }
                     };
 
                     xhr.onerror = () => {
-                        reject(new Error('Network error during upload'));
+                        // Check if it's a CORS error (status 0) or network error
+                        if (xhr.status === 0) {
+                            reject(new Error('CORS_ERROR'));
+                        } else if (xhr.status === 403) {
+                            reject(new Error('S3_PERMISSION_ERROR'));
+                        } else {
+                            reject(new Error('Network error during upload'));
+                        }
                     };
 
                     xhr.ontimeout = () => {
@@ -212,7 +224,43 @@ export default function VideoUpload() {
                     xhr.send(file);
                 });
 
-                const result = await uploadPromise;
+                let result;
+                try {
+                    result = await uploadPromise;
+                } catch (uploadError: any) {
+                    // Handle S3 permission/CORS errors - fallback to server upload
+                    if (uploadError.message === 'CORS_ERROR' || uploadError.message === 'S3_PERMISSION_ERROR') {
+                        console.log(`🔄 ${uploadError.message}: Falling back to server upload...`);
+                        
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        
+                        const serverResponse = await fetch('/api/upload-proxy', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (!serverResponse.ok) {
+                            throw new Error(`Server upload failed: ${serverResponse.status}`);
+                        }
+                        
+                        const serverResult = await serverResponse.json();
+                        if (!serverResult.success) {
+                            throw new Error(serverResult.error || 'Server upload failed');
+                        }
+                        
+                        result = {
+                            success: true,
+                            key: serverResult.key,
+                            fileName: serverResult.fileName,
+                            finalUrl: serverResult.url
+                        };
+                        
+                        console.log('✅ Fallback server upload successful');
+                    } else {
+                        throw uploadError;
+                    }
+                }
 
                 if (!result.success) {
                     throw new Error(result.error || 'Upload failed');

@@ -32,14 +32,13 @@ export const generateUploadUrl = async (fileName: string, contentType: string, f
     Bucket: process.env.AWS_S3_BUCKET || '19430110-courses',
     Key: key,
     ContentType: contentType,
-    ACL: 'public-read',
+    // Tạm thời bỏ ACL để test
+    // ACL: 'public-read',
   })
 
-  // Thêm CORS headers vào pre-signed URL
+  // Simplified presigned URL generation  
   const url = await getSignedUrl(s3Client, command, { 
     expiresIn: 300, // 5 phút
-    unhoistableHeaders: new Set(['x-amz-acl']),
-    signableHeaders: new Set(['host', 'x-amz-acl', 'x-amz-content-sha256', 'x-amz-date', 'x-amz-security-token'])
   })
   
   return { url, key }
