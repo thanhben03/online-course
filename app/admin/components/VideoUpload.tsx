@@ -138,22 +138,62 @@ export default function VideoUpload() {
                 });
             }, 200);
 
+            let currentFileIndex = 0;
+            const totalFiles = selectedFiles.length;
+
             for (const file of Array.from(selectedFiles)) {
+                currentFileIndex++;
+                
+                // Cập nhật progress cho file hiện tại
+                setUploadProgress(Math.round((currentFileIndex - 1) / totalFiles * 80)); // 80% cho upload, 20% cho save
+                
+                console.log(`Uploading file ${currentFileIndex}/${totalFiles}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                
                 // Tạo FormData để gửi file (giống upload-test)
                 const fileFormData = new FormData();
                 fileFormData.append("file", file);
 
-                // Upload qua proxy API (giống upload-test)
-                const response = await fetch("/api/upload-proxy", {
-                    method: "POST",
-                    body: fileFormData,
-                });
+                // Upload qua proxy API với timeout lớn hơn cho file lớn
+                const uploadTimeout = file.size > 100 * 1024 * 1024 ? 15 * 60 * 1000 : 5 * 60 * 1000; // 15 phút cho file > 100MB, 5 phút cho file nhỏ
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), uploadTimeout);
+                
+                let result: any;
+                
+                try {
+                    const response = await fetch("/api/upload-proxy", {
+                        method: "POST",
+                        body: fileFormData,
+                        signal: controller.signal,
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+                    }
 
-                const result = await response.json();
+                    result = await response.json();
 
-                if (!response.ok || !result.success) {
-                    throw new Error(result.error || "Upload failed");
+                    if (!result.success) {
+                        throw new Error(result.error || "Upload failed");
+                    }
+                    
+                    console.log(`File ${currentFileIndex}/${totalFiles} uploaded successfully: ${result.fileName}`);
+                    
+                } catch (uploadError: any) {
+                    clearTimeout(timeoutId);
+                    
+                    if (uploadError.name === 'AbortError') {
+                        throw new Error(`Upload timeout cho file ${file.name}. File quá lớn hoặc mạng chậm.`);
+                    }
+                    throw uploadError;
                 }
+                
+                // Cập nhật progress sau khi upload thành công
+                setUploadProgress(Math.round(currentFileIndex / totalFiles * 80));
 
                 // Lưu thông tin file vào database
                 const saveResponse = await fetch("/api/admin/uploads", {
@@ -178,6 +218,9 @@ export default function VideoUpload() {
                 if (!saveResponse.ok || !saveResult.success) {
                     console.warn("Failed to save file info to database:", saveResult.error);
                 }
+
+                // Cập nhật progress cho việc save database
+                setUploadProgress(Math.round(currentFileIndex / totalFiles * 90));
 
                 const uploadedFile: UploadedFile = {
                     id: saveResult.upload?.id,

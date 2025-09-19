@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { uploadToS3LongVan, generateS3Key } from "@/lib/s3-longvan"
+import { uploadStreamToS3LongVan, generateS3Key } from "@/lib/s3-longvan"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Starting proxy upload...')
+    console.log('Starting optimized proxy upload...')
     
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -15,19 +15,11 @@ export async function POST(request: NextRequest) {
 
     console.log('File received:', { name: file.name, size: file.size, type: file.type })
 
-    // Bỏ giới hạn file size - cho phép upload file lớn
-    // const maxSize = 10 * 1024 * 1024
-    // if (file.size > maxSize) {
-    //   console.error('File too large:', file.size)
-    //   return NextResponse.json({ error: 'File size too large. Maximum 10MB allowed.' }, { status: 400 })
-    // }
-
-    // Bỏ giới hạn file type - cho phép tất cả loại file
-    // const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain']
-    // if (!allowedTypes.includes(file.type)) {
-    //   console.error('File type not allowed:', file.type)
-    //   return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
-    // }
+    // Kiểm tra file size để quyết định phương pháp upload
+    const fileSize = file.size
+    const maxMemorySize = 100 * 1024 * 1024 // 100MB - ngưỡng để quyết định dùng stream
+    
+    console.log(`File size: ${(fileSize / 1024 / 1024).toFixed(2)}MB`)
 
     // Check environment variables
     if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
@@ -41,13 +33,28 @@ export async function POST(request: NextRequest) {
     const key = generateS3Key(file.name, 'uploads')
     console.log('Generated key:', key)
 
-    // Convert file to buffer
-    const buffer = Buffer.from(await file.arrayBuffer())
-    console.log('File converted to buffer, size:', buffer.length)
+    // Sử dụng stream cho file lớn để tránh load toàn bộ vào memory
+    if (fileSize > maxMemorySize) {
+      console.log('Large file detected - using stream upload')
+      
+      // Tạo ReadableStream từ file
+      const stream = file.stream()
+      
+      console.log('Uploading large file to S3 using stream...')
+      await uploadStreamToS3LongVan(stream, key, file.type, fileSize)
+      console.log('S3 stream upload successful')
+    } else {
+      console.log('Small file - using buffer upload')
+      
+      // Convert file to buffer cho file nhỏ
+      const buffer = Buffer.from(await file.arrayBuffer())
+      console.log('File converted to buffer, size:', buffer.length)
 
-    console.log('Uploading to S3...')
-    await uploadToS3LongVan(buffer, key, file.type)
-    console.log('S3 upload successful')
+      console.log('Uploading to S3...')
+      const { uploadToS3LongVan } = await import("@/lib/s3-longvan")
+      await uploadToS3LongVan(buffer, key, file.type)
+      console.log('S3 upload successful')
+    }
 
     const url = `https://s3-hcm5-r1.longvan.net/${process.env.AWS_S3_BUCKET || '19428351-course'}/${key}`
     console.log('Generated URL:', url)
