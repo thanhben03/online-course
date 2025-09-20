@@ -34,6 +34,7 @@ export const generateUploadUrl = async (fileName: string, contentType: string, f
     ContentType: contentType,
     // Removed ACL từ presigned URL để tránh permission conflict
     // Public access sẽ được handle bởi bucket policy
+    ACL: 'public-read',
   })
 
   // Simplified presigned URL generation  
@@ -70,6 +71,7 @@ export const uploadStreamToS3LongVan = async (
     Key: key,
     ContentType: contentType,
     // Removed ACL - sẽ dựa vào bucket policy cho public access
+    ACL: 'public-read',
   });
   const { UploadId } = await s3Client.send(createCommand);
 
