@@ -32,7 +32,8 @@ export const generateUploadUrl = async (fileName: string, contentType: string, f
     Bucket: process.env.AWS_S3_BUCKET || '19430110-courses',
     Key: key,
     ContentType: contentType,
-    ACL: 'public-read',
+    // Removed ACL từ presigned URL để tránh permission conflict
+    // Public access sẽ được handle bởi bucket policy
   })
 
   // Simplified presigned URL generation  
@@ -49,7 +50,7 @@ export const uploadToS3LongVan = async (file: Buffer, key: string, contentType: 
     Key: key,
     Body: file,
     ContentType: contentType,
-    ACL: 'public-read',
+    // Removed ACL - sẽ dựa vào bucket policy cho public access
   })
 
   return await s3Client.send(command)
@@ -68,7 +69,7 @@ export const uploadStreamToS3LongVan = async (
     Bucket: bucketName,
     Key: key,
     ContentType: contentType,
-    ACL: 'public-read',
+    // Removed ACL - sẽ dựa vào bucket policy cho public access
   });
   const { UploadId } = await s3Client.send(createCommand);
 
