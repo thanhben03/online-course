@@ -32,8 +32,7 @@ export const generateUploadUrl = async (fileName: string, contentType: string, f
     Bucket: process.env.AWS_S3_BUCKET || '19430110-courses',
     Key: key,
     ContentType: contentType,
-    // Tạm thời bỏ ACL để test
-    // ACL: 'public-read',
+    ACL: 'public-read',
   })
 
   // Simplified presigned URL generation  
