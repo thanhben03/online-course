@@ -365,35 +365,9 @@ export default function LearnPage() {
     router.push("/")
   }
 
-  // Group lessons by order_index ranges (simulating chapters)
-  const getChapters = () => {
-    if (lessons.length === 0) return []
-    
-    const chapters = []
-    let currentChapter = {
-      id: 1,
-      title: "Chương 1",
-      lessons: [] as Lesson[]
-    }
-    
-    lessons.forEach((lesson, index) => {
-      // Create new chapter every 3-4 lessons
-      if (index > 0 && index % 3 === 0) {
-        chapters.push(currentChapter)
-        currentChapter = {
-          id: chapters.length + 1,
-          title: `Chương ${chapters.length + 1}`,
-          lessons: []
-        }
-      }
-      currentChapter.lessons.push(lesson)
-    })
-    
-    if (currentChapter.lessons.length > 0) {
-      chapters.push(currentChapter)
-    }
-    
-    return chapters
+  // Return lessons directly without chapter grouping
+  const getLessons = () => {
+    return lessons
   }
 
   const formatTime = (seconds: number) => {
@@ -468,7 +442,7 @@ export default function LearnPage() {
     )
   }
 
-  const chapters = getChapters()
+  const displayLessons = getLessons()
   const completedLessons = courseProgress?.progress?.completedLessons || 0
   const totalLessons = courseProgress?.progress?.totalLessons || lessons.length
   const progressPercentage = courseProgress?.progress?.percentage || 0
@@ -505,72 +479,70 @@ export default function LearnPage() {
 
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="p-4 space-y-2">
-              {chapters.map((chapter) => (
-                <div key={chapter.id} className="border rounded-lg">
-                  <div className="p-3 border-b bg-gray-50">
-                    <span className="font-medium text-sm">{chapter.title}</span>
-                  </div>
-                  <div>
-                    {chapter.lessons.map((lesson) => (
-                      <Button
-                        key={lesson.id}
-                        variant={currentLesson?.id === lesson.id ? "secondary" : "ghost"}
-                        className="w-full justify-start p-3 h-auto border-b last:border-b-0"
-                        onClick={() => {
-                          handleLessonSelect(lesson)
-                          setShowSidebar(false) // Close sidebar on mobile after selecting lesson
-                        }}
-                      >
-                        <div className="flex items-center space-x-3 w-full">
-                          {lessonProgress[lesson.id]?.completed ? (
-                            <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                          ) : (
-                            <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                          )}
-                          <div className="flex-1 text-left">
-                            <div className="font-medium text-sm flex items-center justify-between">
-                              <span>{lesson.title}</span>
-                              {typeof lessonProgress[lesson.id]?.watched_percentage === 'number' && (
-                                <span className="text-xs text-gray-500 ml-2">{lessonProgress[lesson.id].watched_percentage}%</span>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="flex-shrink-0 p-1"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              markLessonCompleted(lesson.id, !lessonProgress[lesson.id]?.completed)
-                            }}
-                            disabled={
-                              lesson.id === currentLesson?.id && 
-                              !lessonProgress[lesson.id]?.completed && 
-                              !canCompleteCurrentLesson()
-                            }
-                            title={
-                              lesson.id === currentLesson?.id && 
-                              !lessonProgress[lesson.id]?.completed && 
-                              !canCompleteCurrentLesson()
-                                ? "Bạn cần xem ít nhất 90% video để hoàn thành bài học"
-                                : ""
-                            }
-                          >
-                            {lessonProgress[lesson.id]?.completed ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : lesson.id === currentLesson?.id && canCompleteCurrentLesson() ? (
-                              <Circle className="h-4 w-4 text-green-400 animate-pulse" />
-                            ) : (
-                              <Circle className="h-4 w-4 text-gray-400" />
-                            )}
-                          </Button>
-                        </div>
-                      </Button>
-                    ))}
-                  </div>
+              <div className="border rounded-lg">
+                <div className="p-3 border-b bg-gray-50">
+                  <span className="font-medium text-sm">{course?.title || "Danh sách bài học"}</span>
                 </div>
-              ))}
+                <div>
+                  {displayLessons.map((lesson) => (
+                    <Button
+                      key={lesson.id}
+                      variant={currentLesson?.id === lesson.id ? "secondary" : "ghost"}
+                      className="w-full justify-start p-3 h-auto border-b last:border-b-0"
+                      onClick={() => {
+                        handleLessonSelect(lesson)
+                        setShowSidebar(false) // Close sidebar on mobile after selecting lesson
+                      }}
+                    >
+                      <div className="flex items-center space-x-3 w-full">
+                        {lessonProgress[lesson.id]?.completed ? (
+                          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 text-left">
+                          <div className="font-medium text-sm flex items-center justify-between">
+                            <span>{lesson.title}</span>
+                            {typeof lessonProgress[lesson.id]?.watched_percentage === 'number' && (
+                              <span className="text-xs text-gray-500 ml-2">{lessonProgress[lesson.id].watched_percentage}%</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="flex-shrink-0 p-1"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            markLessonCompleted(lesson.id, !lessonProgress[lesson.id]?.completed)
+                          }}
+                          disabled={
+                            lesson.id === currentLesson?.id && 
+                            !lessonProgress[lesson.id]?.completed && 
+                            !canCompleteCurrentLesson()
+                          }
+                          title={
+                            lesson.id === currentLesson?.id && 
+                            !lessonProgress[lesson.id]?.completed && 
+                            !canCompleteCurrentLesson()
+                              ? "Bạn cần xem ít nhất 90% video để hoàn thành bài học"
+                              : ""
+                          }
+                        >
+                          {lessonProgress[lesson.id]?.completed ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : lesson.id === currentLesson?.id && canCompleteCurrentLesson() ? (
+                            <Circle className="h-4 w-4 text-green-400 animate-pulse" />
+                          ) : (
+                            <Circle className="h-4 w-4 text-gray-400" />
+                          )}
+                        </Button>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
           </ScrollArea>
         </div>
@@ -713,64 +685,62 @@ export default function LearnPage() {
             {activeTab === 'content' ? (
               <ScrollArea className="h-full">
                 <div className="p-4 space-y-2">
-                  {chapters.map((chapter) => (
-                    <div key={chapter.id} className="border rounded-lg">
-                      <div className="p-3 border-b bg-gray-50">
-                        <span className="font-medium text-sm">{chapter.title}</span>
-                      </div>
-                      <div>
-                        {chapter.lessons.map((lesson) => (
-                          <Button
-                            key={lesson.id}
-                            variant={currentLesson?.id === lesson.id ? "secondary" : "ghost"}
-                            className="w-full justify-start p-3 h-auto border-b last:border-b-0"
-                            onClick={() => handleLessonSelect(lesson)}
-                          >
-                            <div className="flex items-center space-x-3 w-full">
-                              {lessonProgress[lesson.id]?.completed ? (
-                                <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                              ) : (
-                                <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                              )}
-                              <div className="flex-1 text-left">
-                                <div className="font-medium text-sm">{lesson.title}</div>
-                                <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="flex-shrink-0 p-1"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  markLessonCompleted(lesson.id, !lessonProgress[lesson.id]?.completed)
-                                }}
-                                disabled={
-                                  lesson.id === currentLesson?.id && 
-                                  !lessonProgress[lesson.id]?.completed && 
-                                  !canCompleteCurrentLesson()
-                                }
-                                title={
-                                  lesson.id === currentLesson?.id && 
-                                  !lessonProgress[lesson.id]?.completed && 
-                                  !canCompleteCurrentLesson()
-                                    ? "Bạn cần xem ít nhất 90% video để hoàn thành bài học"
-                                    : ""
-                                }
-                              >
-                                {lessonProgress[lesson.id]?.completed ? (
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
-                                ) : lesson.id === currentLesson?.id && canCompleteCurrentLesson() ? (
-                                  <Circle className="h-4 w-4 text-green-400 animate-pulse" />
-                                ) : (
-                                  <Circle className="h-4 w-4 text-gray-400" />
-                                )}
-                              </Button>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
+                  <div className="border rounded-lg">
+                    <div className="p-3 border-b bg-gray-50">
+                      <span className="font-medium text-sm">{course?.title || "Danh sách bài học"}</span>
                     </div>
-                  ))}
+                    <div>
+                      {displayLessons.map((lesson) => (
+                        <Button
+                          key={lesson.id}
+                          variant={currentLesson?.id === lesson.id ? "secondary" : "ghost"}
+                          className="w-full justify-start p-3 h-auto border-b last:border-b-0"
+                          onClick={() => handleLessonSelect(lesson)}
+                        >
+                          <div className="flex items-center space-x-3 w-full">
+                            {lessonProgress[lesson.id]?.completed ? (
+                              <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                            ) : (
+                              <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            )}
+                            <div className="flex-1 text-left">
+                              <div className="font-medium text-sm">{lesson.title}</div>
+                              <div className="text-xs text-gray-500">{formatTime(lesson.duration)}</div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="flex-shrink-0 p-1"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                markLessonCompleted(lesson.id, !lessonProgress[lesson.id]?.completed)
+                              }}
+                              disabled={
+                                lesson.id === currentLesson?.id && 
+                                !lessonProgress[lesson.id]?.completed && 
+                                !canCompleteCurrentLesson()
+                              }
+                              title={
+                                lesson.id === currentLesson?.id && 
+                                !lessonProgress[lesson.id]?.completed && 
+                                !canCompleteCurrentLesson()
+                                  ? "Bạn cần xem ít nhất 90% video để hoàn thành bài học"
+                                  : ""
+                              }
+                            >
+                              {lessonProgress[lesson.id]?.completed ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : lesson.id === currentLesson?.id && canCompleteCurrentLesson() ? (
+                                <Circle className="h-4 w-4 text-green-400 animate-pulse" />
+                              ) : (
+                                <Circle className="h-4 w-4 text-gray-400" />
+                              )}
+                            </Button>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </ScrollArea>
             ) : (
