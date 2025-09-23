@@ -502,7 +502,7 @@ export default function LearnPage() {
                         )}
                         <div className="flex-1 text-left">
                           <div className="font-medium text-sm flex items-center justify-between">
-                            <span>{lesson.title}</span>
+                            <span className="break-words whitespace-normal">{lesson.title}</span>
                             {typeof lessonProgress[lesson.id]?.watched_percentage === 'number' && (
                               <span className="text-xs text-gray-500 ml-2">{lessonProgress[lesson.id].watched_percentage}%</span>
                             )}
