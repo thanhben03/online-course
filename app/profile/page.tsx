@@ -26,7 +26,9 @@ export default function ProfilePage() {
 
     setIsLoggedIn(true)
     if (user) {
-      setUserInfo(JSON.parse(user))
+      const parsedUser = JSON.parse(user)
+      console.log('User info in profile:', parsedUser)
+      setUserInfo(parsedUser)
     }
   }, [router])
 
@@ -85,7 +87,7 @@ export default function ProfilePage() {
                   <Phone className="h-4 w-4 text-gray-500" />
                   <span>Số điện thoại</span>
                 </Label>
-                <Input id="phone" value={userInfo.phone} readOnly className="bg-gray-50 cursor-not-allowed" />
+                <Input id="phone" value={userInfo.phone || "Chưa cập nhật"} readOnly className="bg-gray-50 cursor-not-allowed" />
               </div>
 
               <div className="space-y-2">
@@ -101,7 +103,7 @@ export default function ProfilePage() {
                   <School className="h-4 w-4 text-gray-500" />
                   <span>Trường học</span>
                 </Label>
-                <Input id="school" value={userInfo.school} readOnly className="bg-gray-50 cursor-not-allowed" />
+                <Input id="school" value={userInfo.school || "Chưa cập nhật"} readOnly className="bg-gray-50 cursor-not-allowed" />
               </div>
 
               <div className="space-y-2">
@@ -109,15 +111,15 @@ export default function ProfilePage() {
                   <MapPin className="h-4 w-4 text-gray-500" />
                   <span>Thành phố</span>
                 </Label>
-                <Input id="city" value={userInfo.city} readOnly className="bg-gray-50 cursor-not-allowed" />
+                <Input id="city" value={userInfo.city || "Chưa cập nhật"} readOnly className="bg-gray-50 cursor-not-allowed" />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category" className="flex items-center space-x-2">
+                <Label htmlFor="grade" className="flex items-center space-x-2">
                   <Tag className="h-4 w-4 text-gray-500" />
-                  <span>Phân loại</span>
+                  <span>Lớp</span>
                 </Label>
-                <Input id="category" value={userInfo.category} readOnly className="bg-gray-50 cursor-not-allowed" />
+                <Input id="grade" value={userInfo.grade || "Chưa cập nhật"} readOnly className="bg-gray-50 cursor-not-allowed" />
               </div>
             </div>
 

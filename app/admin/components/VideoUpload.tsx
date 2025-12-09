@@ -117,7 +117,7 @@ export default function VideoUpload() {
         }
     };
 
-    // Upload files
+    // Upload files với Presigned URL (trực tiếp lên S3)
     const handleUpload = async () => {
         if (!selectedFiles || selectedFiles.length === 0) {
             setMessage({ type: "error", text: "Vui lòng chọn file để upload" });
@@ -128,9 +128,6 @@ export default function VideoUpload() {
         setUploadProgress(0);
 
         try {
-            // Upload từng file một qua API proxy (giống upload-test)
-            const uploadedResults = [];
-
             // Calculate total file size for all files
             const totalBytes = Array.from(selectedFiles).reduce((sum, file) => sum + file.size, 0);
             setTotalMB(totalBytes / (1024 * 1024));
@@ -138,76 +135,138 @@ export default function VideoUpload() {
             setUploadSpeed(0);
             setUploadStartTime(Date.now());
 
-            for (const file of Array.from(selectedFiles)) {
-                console.log('Starting upload via upload-proxy (server upload) for file:', file.name);
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                console.log(`🚀 PRESIGNED UPLOAD: Starting upload ${i+1}/${selectedFiles.length} for ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
 
-                // Tạo FormData để gửi file qua server (bypass CORS)
-                const fileFormData = new FormData();
-                fileFormData.append("file", file);
+                // Step 1: Get presigned URL từ server
+                const urlResponse = await fetch("/api/generate-upload-url", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        contentType: file.type,
+                        folder: 'uploads'
+                    }),
+                });
 
-                // Sử dụng XMLHttpRequest với streaming để bypass Vercel limits
-                const xhr = new XMLHttpRequest();
+                if (!urlResponse.ok) {
+                    const errorText = await urlResponse.text();
+                    throw new Error(`Failed to get upload URL: ${urlResponse.status} - ${errorText}`);
+                }
 
-                // Promise để handle XMLHttpRequest
-                const uploadPromise = new Promise<any>((resolve, reject) => {
+                const urlResult = await urlResponse.json();
+                if (!urlResult.success) {
+                    throw new Error(urlResult.error || "Failed to generate upload URL");
+                }
+
+                console.log('✅ Got presigned URL:', urlResult.key);
+
+                // Step 2: Upload trực tiếp lên S3 với progress tracking
+                const uploadPromise = new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    
+                    // Track upload progress
                     xhr.upload.addEventListener('progress', (event) => {
                         if (event.lengthComputable) {
-                            const progressPercent = Math.round((event.loaded / event.total) * 100);
-                            const uploadedMegabytes = event.loaded / (1024 * 1024);
-                            const totalMegabytes = event.total / (1024 * 1024);
+                            const fileProgress = (event.loaded / event.total) * 100;
+                            const overallProgress = ((i * 100) + fileProgress) / selectedFiles.length;
+                            setUploadProgress(overallProgress);
                             
-                            // Tính tốc độ upload (MB/s)
-                            const currentTime = Date.now();
-                            const elapsedSeconds = (currentTime - uploadStartTime) / 1000;
-                            const currentSpeed = elapsedSeconds > 0 ? uploadedMegabytes / elapsedSeconds : 0;
+                            // Update upload stats
+                            const uploadedBytes = (i * file.size) + event.loaded;
+                            setUploadedMB(uploadedBytes / (1024 * 1024));
                             
-                            setUploadProgress(progressPercent);
-                            setUploadedMB(uploadedMegabytes);
-                            setUploadSpeed(currentSpeed);
-                            
-                            console.log(`🌊 ADMIN STREAMING UPLOAD: ${progressPercent}% | ${uploadedMegabytes.toFixed(2)}MB / ${totalMegabytes.toFixed(2)}MB | Speed: ${currentSpeed.toFixed(2)} MB/s`);
-                            console.log(`📊 Bytes streamed: ${event.loaded.toLocaleString()} / ${event.total.toLocaleString()}`);
-                        }
-                    });
-
-                    xhr.addEventListener('load', () => {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            try {
-                                const result = JSON.parse(xhr.responseText);
-                                resolve(result);
-                            } catch (e) {
-                                reject(new Error('Invalid response format'));
+                            const elapsed = (Date.now() - uploadStartTime) / 1000;
+                            if (elapsed > 0) {
+                                const speed = (uploadedBytes / elapsed) / (1024 * 1024); // MB/s
+                                setUploadSpeed(speed);
                             }
-                        } else {
-                            reject(new Error(`Streaming upload failed: ${xhr.status} ${xhr.statusText}`));
                         }
                     });
 
-                    xhr.addEventListener('error', () => {
-                        reject(new Error('Network error occurred during streaming'));
-                    });
+                    xhr.onload = () => {
+                        if (xhr.status === 200 || xhr.status === 204) {
+                            resolve(urlResult);
+                        } else {
+                            // Handle 403 Forbidden (CORS/Permission issue)
+                            if (xhr.status === 403) {
+                                reject(new Error('S3_PERMISSION_ERROR'));
+                            } else {
+                                reject(new Error(`Upload failed with status: ${xhr.status}`));
+                            }
+                        }
+                    };
 
-                    xhr.addEventListener('abort', () => {
-                        reject(new Error('Streaming upload was aborted'));
-                    });
+                    xhr.onerror = () => {
+                        // Check if it's a CORS error (status 0) or network error
+                        if (xhr.status === 0) {
+                            reject(new Error('CORS_ERROR'));
+                        } else if (xhr.status === 403) {
+                            reject(new Error('S3_PERMISSION_ERROR'));
+                        } else {
+                            reject(new Error('Network error during upload'));
+                        }
+                    };
 
-                    // Sử dụng streaming endpoint với custom headers
-                    xhr.open('POST', '/api/upload-stream');
+                    xhr.ontimeout = () => {
+                        reject(new Error('Upload timeout'));
+                    };
+
+                    // Set timeout dựa trên file size
+                    xhr.timeout = file.size > 500 * 1024 * 1024 ? 30 * 60 * 1000 : 15 * 60 * 1000; // 30 phút cho file > 500MB
+
+                    // Upload file với PUT method (presigned URL)
+                    xhr.open('PUT', urlResult.uploadUrl);
                     xhr.setRequestHeader('Content-Type', file.type);
-                    xhr.setRequestHeader('Content-Length', file.size.toString());
-                    xhr.setRequestHeader('X-File-Name', file.name);
-                    
-                    // Gửi file trực tiếp thay vì FormData để streaming
                     xhr.send(file);
                 });
 
-                const result = await uploadPromise;
+                let result;
+                try {
+                    result = await uploadPromise;
+                } catch (uploadError: any) {
+                    // Handle S3 permission/CORS errors - fallback to server upload
+                    if (uploadError.message === 'CORS_ERROR' || uploadError.message === 'S3_PERMISSION_ERROR') {
+                        console.log(`🔄 ${uploadError.message}: Falling back to server upload...`);
+                        
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        
+                        const serverResponse = await fetch('/api/upload-proxy', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (!serverResponse.ok) {
+                            throw new Error(`Server upload failed: ${serverResponse.status}`);
+                        }
+                        
+                        const serverResult = await serverResponse.json();
+                        if (!serverResult.success) {
+                            throw new Error(serverResult.error || 'Server upload failed');
+                        }
+                        
+                        result = {
+                            success: true,
+                            key: serverResult.key,
+                            fileName: serverResult.fileName,
+                            finalUrl: serverResult.url
+                        };
+                        
+                        console.log('✅ Fallback server upload successful');
+                    } else {
+                        throw uploadError;
+                    }
+                }
 
                 if (!result.success) {
                     throw new Error(result.error || 'Upload failed');
                 }
 
-                console.log('File uploaded successfully via server:', result.key);
+                console.log('✅ File uploaded successfully to S3:', result.key);
 
                 // Lưu thông tin file vào database
                 const saveResponse = await fetch("/api/admin/uploads", {
@@ -218,11 +277,11 @@ export default function VideoUpload() {
                     body: JSON.stringify({
                         filename: result.fileName,
                         original_name: file.name,
-                        file_size: result.fileSize,
-                        file_type: result.fileType,
+                        file_size: file.size,
+                        file_type: file.type,
                         s3_key: result.key,
-                        s3_url: result.url,
-                        user_id: null, // Có thể thêm user ID nếu cần
+                        s3_url: result.finalUrl,
+                        user_id: null,
                         lesson_id: selectedLessonId
                     }),
                 });
@@ -235,11 +294,11 @@ export default function VideoUpload() {
 
                 const uploadedFile: UploadedFile = {
                     id: saveResult.upload?.id,
-                    url: result.url,
+                    url: result.finalUrl,
                     key: result.key,
                     fileName: result.fileName,
-                    fileSize: result.fileSize,
-                    fileType: result.fileType,
+                    fileSize: file.size,
+                    fileType: file.type,
                     uploadedAt: new Date(),
                 };
 
