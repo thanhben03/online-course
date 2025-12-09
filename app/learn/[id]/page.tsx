@@ -86,8 +86,16 @@ export default function LearnPage() {
   const router = useRouter()
   const { toast } = useToast()
   const courseId = Number.parseInt(params.id as string)
+  
+  // Add validation for courseId
+  if (Number.isNaN(courseId) || courseId <= 0) {
+    console.error('❌ Invalid courseId:', params.id)
+    router.push('/courses')
+    return <div>Invalid course ID</div>
+  }
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userInfo, setUserInfo] = useState<any>(null)
+  const [isMounted, setIsMounted] = useState(false)
   const [course, setCourse] = useState<Course | null>(null)
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
@@ -296,10 +304,19 @@ export default function LearnPage() {
   }
 
   useEffect(() => {
+    // Set mounted state to prevent hydration issues
+    setIsMounted(true)
+    
+    // Add debugging for authentication issues
+    console.log('🔍 Learn page auth check - courseId:', courseId)
+    
     const loggedIn = localStorage.getItem("isLoggedIn")
     const user = localStorage.getItem("userInfo")
+    
+    console.log('📋 Auth status:', { loggedIn, hasUser: !!user })
 
     if (!loggedIn) {
+      console.log('❌ Not logged in, redirecting to login...')
       router.push("/login")
       return
     }
@@ -362,6 +379,8 @@ export default function LearnPage() {
   }, [isPlaying, duration])
 
   const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn")
+    localStorage.removeItem("userInfo")
     router.push("/")
   }
 
@@ -418,12 +437,15 @@ export default function LearnPage() {
     return <div>Đang tải...</div>
   }
 
-  if (loading) {
+  // Show loading until mounted and auth check complete
+  if (!isMounted || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Đang tải khóa học...</p>
+          <p>
+            {!isMounted ? 'Đang khởi tạo...' : 'Đang tải khóa học...'}
+          </p>
         </div>
       </div>
     )
