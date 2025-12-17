@@ -7,6 +7,11 @@ export interface User {
   name: string;
   avatar_url?: string;
   role: string;
+  phone?: string;
+  school?: string;
+  city?: string;
+  grade?: string;
+  category?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -35,7 +40,7 @@ export const userService = {
   // Tìm user theo email
   async findByEmail(email: string): Promise<(User & { password_hash: string }) | null> {
     const result = await sql`
-      SELECT id, email, name, password_hash, avatar_url, role, created_at, updated_at
+      SELECT id, email, name, password_hash, avatar_url, role, phone, school, city, grade, created_at, updated_at
       FROM users 
       WHERE email = ${email}
     `;
@@ -46,7 +51,7 @@ export const userService = {
   // Tìm user theo ID
   async findById(id: number): Promise<User | null> {
     const result = await sql`
-      SELECT id, email, name, avatar_url, role, created_at, updated_at
+      SELECT id, email, name, avatar_url, role, phone, school, city, grade, created_at, updated_at
       FROM users 
       WHERE id = ${id}
     `;
